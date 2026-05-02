@@ -118,7 +118,7 @@ export default function CollectionPage() {
 
   const characters = DEMO_CHARACTERS.filter(c => c.role === activeRole)
   const filtered = filter === 'all' ? characters : characters.filter(c => c.genre === filter)
-  const genres = ['all', ...new Set(characters.map(c => c.genre))]
+  const genres = ['all', ...Array.from(new Set(characters.map(c => c.genre)))]
 
   const allSelected = ROLES.every(r => selected[r] !== null)
 
@@ -131,16 +131,10 @@ export default function CollectionPage() {
 
   const handleFuse = () => {
     if (!allSelected) return
-    const params = new URLSearchParams({
-      rhythm: selected.rhythm!.id,
-      melody: selected.melody!.id,
-      vocals: selected.vocals!.id,
-    })
-    // Store full chars in sessionStorage
     sessionStorage.setItem('selected_rhythm', JSON.stringify(selected.rhythm))
     sessionStorage.setItem('selected_melody', JSON.stringify(selected.melody))
     sessionStorage.setItem('selected_vocals', JSON.stringify(selected.vocals))
-    router.push(`/fuse?${params}`)
+    router.push('/fuse')
   }
 
   return (
@@ -226,7 +220,7 @@ export default function CollectionPage() {
             {ROLES.map(role => (
               <button
                 key={role}
-                onClick={() => setActiveRole(role)}
+                onClick={() => { setActiveRole(role); setFilter('all') }}
                 className={`font-mono text-xs tracking-widest uppercase px-6 py-3 transition-colors
                   ${activeRole === role ? 'bg-blood text-white' : 'text-smoke hover:text-bone'}`}
               >
