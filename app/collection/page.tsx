@@ -131,6 +131,40 @@ export default function CollectionPage() {
     router.push('/fuse')
   }
 
+  async function compressImage(file: File, maxBytes = 3.5 * 1024 * 1024): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        const canvas = document.createElement('canvas')
+        // Scale down if needed so the longest side ≤ 1536px
+        const MAX_DIM = 1536
+        let { width, height } = img
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width >= height) { height = Math.round(height * MAX_DIM / width); width = MAX_DIM }
+          else { width = Math.round(width * MAX_DIM / height); height = MAX_DIM }
+        }
+        canvas.width = width
+        canvas.height = height
+        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+        // Try quality levels until under maxBytes
+        let quality = 0.92
+        const tryEncode = () => {
+          canvas.toBlob(blob => {
+            if (!blob) return reject(new Error('Canvas toBlob failed'))
+            if (blob.size <= maxBytes || quality <= 0.5) return resolve(blob)
+            quality -= 0.1
+            tryEncode()
+          }, 'image/jpeg', quality)
+        }
+        tryEncode()
+      }
+      img.onerror = reject
+      img.src = url
+    })
+  }
+
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     if (!detailChar) return
     const file = e.target.files?.[0]
@@ -139,8 +173,13 @@ export default function CollectionPage() {
     setUploading(true)
     setUploadSuccess(false)
 
+    let uploadBlob: Blob = file
+    if (file.size > 3.5 * 1024 * 1024) {
+      try { uploadBlob = await compressImage(file) } catch { /* use original */ }
+    }
+
     const formData = new FormData()
-    formData.append('file', file)
+    formData.append('file', new File([uploadBlob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
     formData.append('characterId', detailChar.id)
 
     try {
