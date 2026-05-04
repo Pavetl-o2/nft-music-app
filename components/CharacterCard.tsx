@@ -11,6 +11,7 @@ interface CharacterCardProps {
   compact?: boolean
   adminMode?: boolean
   hasImage?: boolean
+  imagePosition?: { x: number; y: number }
 }
 
 const TAPE_VARIANTS: Record<string, 'yellow' | 'green'> = {
@@ -19,7 +20,7 @@ const TAPE_VARIANTS: Record<string, 'yellow' | 'green'> = {
   vocals: 'green',
 }
 
-export function CharacterCard({ character, selected, onClick, compact, adminMode, hasImage }: CharacterCardProps) {
+export function CharacterCard({ character, selected, onClick, compact, adminMode, hasImage, imagePosition }: CharacterCardProps) {
   const trait = character.public_metadata.kit_type
     || character.public_metadata.instrument
     || character.public_metadata.vocal_style
@@ -71,7 +72,12 @@ export function CharacterCard({ character, selected, onClick, compact, adminMode
               <img
                 src={character.image_url}
                 alt={character.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  objectPosition: imagePosition ? `${imagePosition.x}% ${imagePosition.y}%` : '50% 50%',
+                }}
               />
               <div className="scanlines" style={{ position: 'absolute', inset: 0, opacity: 0.3 }} />
             </div>

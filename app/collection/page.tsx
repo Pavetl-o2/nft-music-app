@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CharacterCard } from '@/components/CharacterCard'
@@ -41,6 +41,23 @@ export default function CollectionPage() {
   const [copiedNegative, setCopiedNegative] = useState(false)
   const [adminMode, setAdminMode] = useState(false)
   const [progressSynced, setProgressSynced] = useState(false)
+  const [imagePositions, setImagePositions] = useState<Record<string, { x: number; y: number }>>({})
+
+  // Load/save image positions from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('nft_image_positions')
+      if (saved) setImagePositions(JSON.parse(saved))
+    } catch {}
+  }, [])
+
+  function savePosition(charId: string, pos: { x: number; y: number }) {
+    setImagePositions(prev => {
+      const next = { ...prev, [charId]: pos }
+      try { localStorage.setItem('nft_image_positions', JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const promptsFileRef = useRef<HTMLInputElement>(null)
@@ -439,6 +456,8 @@ export default function CollectionPage() {
                   promptsLoaded={promptsLoaded}
                   onClose={() => setDetailChar(null)}
                   onLightbox={setLightboxUrl}
+                  position={imagePositions[detailChar.id] ?? { x: 50, y: 50 }}
+                  onSavePosition={(pos) => savePosition(detailChar.id, pos)}
                 />
               </motion.div>
             )}
@@ -603,6 +622,7 @@ export default function CollectionPage() {
                       hasImage={!!char.image_url}
                       adminMode={adminMode}
                       onClick={() => handleSelect(char)}
+                      imagePosition={imagePositions[char.id]}
                     />
                   </motion.div>
                 ))}
@@ -927,7 +947,24 @@ function AdminDetail({
   promptsLoaded: boolean
   onClose: () => void
   onLightbox: (url: string) => void
+  position: { x: number; y: number }
+  onSavePosition: (pos: { x: number; y: number }) => void
 }) {
+  const [pos, setPos] = React.useState(position)
+  const [dragging, setDragging] = React.useState(false)
+  const repoRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => { setPos(position) }, [char.id])
+
+  function handleRepoDrag(e: React.MouseEvent<HTMLDivElement>) {
+    const rect = repoRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const x = Math.round(Math.min(100, Math.max(0, ((e.clientX - rect.left) / rect.width) * 100)))
+    const y = Math.round(Math.min(100, Math.max(0, ((e.clientY - rect.top) / rect.height) * 100)))
+    setPos({ x, y })
+    onSavePosition({ x, y })
+  }
+
   return (
     <div
       className="paper-card"
@@ -943,19 +980,24 @@ function AdminDetail({
       </button>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 22, alignItems: 'flex-start' }}>
-        {/* image preview */}
-        <div style={{ width: 200 }}>
+        {/* image preview + repositioner */}
+        <div style={{ width: 220 }}>
+          {/* Card-like preview \u2014 drag to reposition */}
           <div
+            ref={repoRef}
+            onMouseDown={() => setDragging(true)}
+            onMouseMove={(e) => { if (dragging) handleRepoDrag(e) }}
+            onMouseUp={(e) => { setDragging(false); handleRepoDrag(e) }}
+            onMouseLeave={() => setDragging(false)}
             style={{
-              width: 200,
-              height: 200,
+              width: 220,
+              height: 160,
               border: '2px solid var(--ink)',
               background: 'var(--paper-2)',
               position: 'relative',
               overflow: 'hidden',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              cursor: image ? (dragging ? 'grabbing' : 'grab') : 'default',
+              userSelect: 'none',
             }}
           >
             {image ? (
@@ -963,21 +1005,37 @@ function AdminDetail({
                 <img
                   src={image}
                   alt=""
-                  onClick={() => onLightbox(image)}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'zoom-in' }}
+                  draggable={false}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    objectPosition: `${pos.x}% ${pos.y}%`,
+                    pointerEvents: 'none',
+                  }}
                 />
+                {/* crosshair */}
+                <div style={{
+                  position: 'absolute',
+                  left: `${pos.x}%`,
+                  top: `${pos.y}%`,
+                  transform: 'translate(-50%,-50%)',
+                  pointerEvents: 'none',
+                }}>
+                  <div style={{ width: 18, height: 18, border: '2px solid #fff', borderRadius: '50%', boxShadow: '0 0 0 1px rgba(0,0,0,.5)' }} />
+                </div>
+                {/* hint */}
+                <div style={{
+                  position: 'absolute', bottom: 4, left: 0, right: 0, textAlign: 'center',
+                  fontFamily: 'var(--font-mono)', fontSize: 8, letterSpacing: '.15em',
+                  color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,.9)', opacity: dragging ? 0 : 0.7,
+                  transition: 'opacity .2s', pointerEvents: 'none',
+                }}>
+                  DRAG TO REPOSITION
+                </div>
                 {uploadSuccess && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      background: 'rgba(255,34,48,0.3)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <span style={{ color: 'var(--paper)', fontSize: 32 }}>{'\u2713'}</span>
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,34,48,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ color: 'var(--paper)', fontSize: 32 }}>\u2713</span>
                   </div>
                 )}
               </>
@@ -985,19 +1043,33 @@ function AdminDetail({
               <PortraitPlaceholder char={char} size="lg" />
             )}
           </div>
-          <label
-            className="btn-punk"
-            style={{ display: 'block', textAlign: 'center', marginTop: 10, fontSize: 13, cursor: 'pointer' }}
-          >
-            {uploading ? '\u21BB UPLOADING...' : image ? '\u21BB REPLACE' : '\u2913 UPLOAD'}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={onUpload}
-              style={{ display: 'none' }}
-            />
-          </label>
+
+          {/* position readout */}
+          {image && (
+            <div className="font-mono" style={{ fontSize: 9, letterSpacing: '.15em', color: 'var(--pencil)', marginTop: 5, textAlign: 'center' }}>
+              POS {pos.x}% \u00B7 {pos.y}%
+            </div>
+          )}
+
+          {/* zoom-in + upload buttons */}
+          <div style={{ display: 'flex', gap: 6, marginTop: image ? 4 : 10 }}>
+            {image && (
+              <button
+                className="btn-punk btn-punk-ghost"
+                onClick={() => onLightbox(image)}
+                style={{ flex: 1, fontSize: 12, padding: '8px 0' }}
+              >
+                \u2922 FULL
+              </button>
+            )}
+            <label
+              className="btn-punk"
+              style={{ flex: 2, display: 'block', textAlign: 'center', fontSize: 13, cursor: 'pointer', padding: '8px 0' }}
+            >
+              {uploading ? '\u21BB UPLOADING...' : image ? '\u21BB REPLACE' : '\u2193 UPLOAD'}
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={onUpload} style={{ display: 'none' }} />
+            </label>
+          </div>
         </div>
 
         <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
