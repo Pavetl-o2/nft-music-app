@@ -1,20 +1,21 @@
 import type { Metadata } from 'next'
-import { Bebas_Neue, Space_Mono, DM_Sans } from 'next/font/google'
+import { Anton, Special_Elite, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 
-const bebasNeue = Bebas_Neue({
+const anton = Anton({
   weight: '400',
   subsets: ['latin'],
   variable: '--font-display',
 })
 
-const dmSans = DM_Sans({
+const specialElite = Special_Elite({
+  weight: '400',
   subsets: ['latin'],
   variable: '--font-body',
 })
 
-const spaceMono = Space_Mono({
-  weight: ['400', '700'],
+const jetbrainsMono = JetBrains_Mono({
+  weight: ['400', '500', '700'],
   subsets: ['latin'],
   variable: '--font-mono',
 })
@@ -30,8 +31,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="es" className="dark">
-      <body className={`${bebasNeue.variable} ${dmSans.variable} ${spaceMono.variable} bg-void text-bone antialiased`}>
+    <html lang="es">
+      <body className={`${anton.variable} ${specialElite.variable} ${jetbrainsMono.variable} antialiased`}>
         {children}
       </body>
     </html>

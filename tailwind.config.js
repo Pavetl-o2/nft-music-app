@@ -8,6 +8,18 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        paper: '#ece5d8',
+        'paper-2': '#ddd4c2',
+        'paper-3': '#c8bea8',
+        ink: '#0e0d0a',
+        'ink-2': '#1f1d18',
+        'ink-soft': '#3a362e',
+        pencil: '#6b665c',
+        accent: 'var(--accent)',
+        tape: '#f5e58a',
+        'tape-2': '#c4d8c0',
+        stamp: '#2a4ba0',
+        // keep old names as aliases for other pages (landing, fuse)
         void: '#080808',
         obsidian: '#111111',
         iron: '#1a1a1a',
@@ -23,9 +35,9 @@ module.exports = {
         amber: '#f0b840',
       },
       fontFamily: {
-        display: ['var(--font-display)', 'serif'],
-        body: ['var(--font-body)', 'sans-serif'],
-        mono: ['var(--font-mono)', 'monospace'],
+        display: ['var(--font-display)', 'Impact', 'sans-serif'],
+        body: ['var(--font-body)', 'Courier New', 'monospace'],
+        mono: ['var(--font-mono)', 'Courier New', 'monospace'],
       },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
@@ -34,6 +46,7 @@ module.exports = {
         'slide-up': 'slideUp 0.4s ease-out',
         'fade-in': 'fadeIn 0.6s ease-out',
         'waveform': 'waveform 1.2s ease-in-out infinite',
+        'shake': 'shake .25s linear infinite',
       },
       keyframes: {
         flicker: {
@@ -49,12 +62,16 @@ module.exports = {
           '100%': { opacity: '1' },
         },
         waveform: {
-          '0%, 100%': { transform: 'scaleY(0.3)' },
+          '0%, 100%': { transform: 'scaleY(0.2)' },
           '50%': { transform: 'scaleY(1)' },
         },
-      },
-      backgroundImage: {
-        'noise': "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E\")",
+        shake: {
+          '0%, 100%': { transform: 'translate(0,0) rotate(0)' },
+          '20%': { transform: 'translate(-2px, 1px) rotate(-.4deg)' },
+          '40%': { transform: 'translate(2px, -1px) rotate(.3deg)' },
+          '60%': { transform: 'translate(-1px, 2px) rotate(-.2deg)' },
+          '80%': { transform: 'translate(1px, -2px) rotate(.2deg)' },
+        },
       },
     },
   },

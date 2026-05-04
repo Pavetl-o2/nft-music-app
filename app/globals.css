@@ -2,65 +2,199 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── SOUNDFORGE — Punk Zine ── */
+
 :root {
-  --font-display: 'Bebas Neue', serif;
-  --font-body: 'DM Sans', sans-serif;
-  --font-mono: 'Space Mono', monospace;
+  --font-display: 'Anton', 'Impact', sans-serif;
+  --font-body: 'Special Elite', 'Courier New', monospace;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+
+  --paper: #ece5d8;
+  --paper-2: #ddd4c2;
+  --paper-3: #c8bea8;
+  --ink: #0e0d0a;
+  --ink-2: #1f1d18;
+  --ink-soft: #3a362e;
+  --pencil: #6b665c;
+  --accent: #ff2230;
+  --tape: #f5e58a;
+  --tape-2: #c4d8c0;
+  --stamp: #2a4ba0;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
-html {
-  scroll-behavior: smooth;
-}
+html { scroll-behavior: smooth; }
 
 body {
-  background-color: #080808;
-  background-image: 
-    radial-gradient(ellipse at 20% 50%, rgba(204, 34, 0, 0.03) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 20%, rgba(200, 149, 42, 0.03) 0%, transparent 60%);
+  margin: 0;
+  padding: 0;
+  background: var(--ink);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
   min-height: 100vh;
+  background:
+    radial-gradient(ellipse at 30% 10%, rgba(0,0,0,.25), transparent 60%),
+    radial-gradient(ellipse at 80% 90%, rgba(0,0,0,.35), transparent 60%),
+    var(--paper);
+  background-attachment: fixed;
+  position: relative;
+  overflow-x: hidden;
 }
 
-/* Noise overlay */
+/* paper grain overlay */
 body::before {
-  content: '';
+  content: "";
   position: fixed;
   inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
   pointer-events: none;
-  z-index: 9999;
-  opacity: 0.4;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.18 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply;
+  opacity: .55;
+  z-index: 1;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 4px;
-}
-::-webkit-scrollbar-track {
-  background: #111;
-}
-::-webkit-scrollbar-thumb {
-  background: #cc2200;
+/* photocopy speckle */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(rgba(0,0,0,.55) 1px, transparent 1.4px),
+    radial-gradient(rgba(0,0,0,.35) .8px, transparent 1.4px);
+  background-size: 7px 7px, 13px 13px;
+  background-position: 0 0, 3px 4px;
+  opacity: .06;
+  z-index: 1;
 }
 
-/* Selection */
+#__next { position: relative; z-index: 2; }
+
 ::selection {
-  background: rgba(204, 34, 0, 0.3);
-  color: #fff;
+  background: rgba(255, 34, 48, 0.3);
+  color: var(--ink);
 }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--paper-2); }
+::-webkit-scrollbar-thumb { background: var(--ink); border: 2px solid var(--paper-2); }
+
+/* ── TYPE ── */
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: .01em;
+  text-transform: uppercase;
+}
+
+/* ── ELEMENTS ── */
+
+.paper-card {
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  position: relative;
+  box-shadow: 4px 4px 0 0 var(--ink);
+}
+
+.tape-strip {
+  position: absolute;
+  background: var(--tape);
+  border: 1px dashed rgba(0,0,0,.35);
+  box-shadow: 0 1px 2px rgba(0,0,0,.15);
+  opacity: .92;
+  pointer-events: none;
+}
+.tape-strip::before, .tape-strip::after {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 6px;
+  background-image: linear-gradient(90deg, transparent 50%, rgba(0,0,0,.18) 50%);
+  background-size: 4px 100%;
+}
+.tape-strip::before { left: 0; }
+.tape-strip::after { right: 0; }
+
+.sticker {
+  position: absolute;
+  background: var(--accent);
+  color: var(--paper);
+  border: 2px solid var(--ink);
+  padding: 4px 10px;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  box-shadow: 2px 2px 0 0 var(--ink);
+  white-space: nowrap;
+}
+
+.scribble-under {
+  position: relative;
+  display: inline-block;
+}
+.scribble-under::after {
+  content: "";
+  position: absolute;
+  left: -4px; right: -4px; bottom: -6px;
+  height: 8px;
+  background: var(--accent);
+  filter: url(#scribbleFilter);
+  opacity: .9;
+  z-index: -1;
+}
+
+/* ── BUTTONS ── */
 
 @layer components {
+  .btn-punk {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    border: 2px solid var(--ink);
+    background: var(--paper);
+    color: var(--ink);
+    padding: 12px 18px;
+    cursor: pointer;
+    position: relative;
+    box-shadow: 4px 4px 0 0 var(--ink);
+    transition: transform .08s ease, box-shadow .08s ease;
+    font-size: 18px;
+  }
+  .btn-punk:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 0 var(--ink); }
+  .btn-punk:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0 0 var(--ink); }
+  .btn-punk:disabled { opacity: .55; cursor: not-allowed; }
+  .btn-punk-primary { background: var(--accent); color: var(--paper); }
+  .btn-punk-ghost { background: transparent; box-shadow: none; }
+  .btn-punk-ghost:hover:not(:disabled) { background: var(--ink); color: var(--paper); }
+
+  .chip {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 4px 8px;
+    border: 1.5px solid var(--ink);
+    background: var(--paper);
+    color: var(--ink);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    cursor: pointer;
+    transition: all .1s ease;
+  }
+  .chip:hover { background: var(--ink); color: var(--paper); }
+  .chip-on { background: var(--ink); color: var(--paper); }
+  .chip-accent.chip-on { background: var(--accent); color: var(--paper); border-color: var(--ink); }
+
+  /* keep old btn-primary/btn-ghost for landing + fuse pages */
   .btn-primary {
-    @apply bg-blood text-white font-mono text-sm tracking-widest uppercase px-6 py-3 
+    @apply bg-blood text-white font-mono text-sm tracking-widest uppercase px-6 py-3
            border border-blood hover:bg-crimson hover:border-crimson
            transition-all duration-200 active:scale-95;
   }
-
   .btn-ghost {
-    @apply bg-transparent text-bone font-mono text-sm tracking-widest uppercase px-6 py-3 
+    @apply bg-transparent text-bone font-mono text-sm tracking-widest uppercase px-6 py-3
            border border-ash hover:border-bone
            transition-all duration-200 active:scale-95;
   }
@@ -68,27 +202,75 @@ body::before {
   .card {
     @apply bg-obsidian border border-steel rounded-none relative overflow-hidden;
   }
-
   .card::before {
     content: '';
-    @apply absolute inset-0 opacity-0 bg-gradient-to-br from-blood/5 to-transparent
-           transition-opacity duration-300;
+    @apply absolute inset-0 opacity-0 bg-gradient-to-br from-blood/5 to-transparent transition-opacity duration-300;
   }
-
-  .card:hover::before {
-    @apply opacity-100;
-  }
+  .card:hover::before { @apply opacity-100; }
 
   .label {
     @apply font-mono text-xs tracking-widest uppercase text-smoke;
   }
-
-  .display {
-    @apply font-display tracking-wider;
-  }
 }
 
-/* Waveform bars */
+/* ── PATTERNS ── */
+
+.halftone {
+  background-image: radial-gradient(currentColor 1.2px, transparent 1.6px);
+  background-size: 6px 6px;
+  color: var(--ink);
+}
+
+.scanlines {
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(0,0,0,.18) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+.diag-stripes {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--ink) 0 6px,
+    transparent 6px 12px
+  );
+}
+
+.crosshatch {
+  background-image:
+    repeating-linear-gradient(45deg, rgba(0,0,0,.5) 0 1px, transparent 1px 5px),
+    repeating-linear-gradient(-45deg, rgba(0,0,0,.5) 0 1px, transparent 1px 5px);
+}
+
+/* scanline (old — for landing/fuse) */
+.scanline {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.08) 2px,
+    rgba(0,0,0,0.08) 4px
+  );
+  pointer-events: none;
+}
+
+/* ── ANIMATIONS ── */
+
+@keyframes waveform {
+  0%, 100% { transform: scaleY(0.2); }
+  50% { transform: scaleY(1); }
+}
+
+@keyframes glitchFlash {
+  0%   { opacity: 0; transform: translate(0,0); }
+  10%  { opacity: 1; transform: translate(-6px, 2px); }
+  18%  { opacity: 1; transform: translate(8px, -3px); }
+  26%  { opacity: 1; transform: translate(-3px, 5px); }
+  35%  { opacity: 1; transform: translate(2px, -2px); }
+  100% { opacity: 1; transform: translate(0,0); }
+}
+
 .waveform-bar {
   animation: waveform 1.2s ease-in-out infinite;
 }
@@ -102,19 +284,5 @@ body::before {
 .waveform-bar:nth-child(9) { animation-delay: 0.2s; }
 .waveform-bar:nth-child(10) { animation-delay: 0.1s; }
 
-@keyframes waveform {
-  0%, 100% { transform: scaleY(0.2); }
-  50% { transform: scaleY(1); }
-}
-
-/* Scanline effect */
-.scanline {
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0,0,0,0.08) 2px,
-    rgba(0,0,0,0.08) 4px
-  );
-  pointer-events: none;
-}
+/* ── UTILITY ── */
+.no-select { user-select: none; }

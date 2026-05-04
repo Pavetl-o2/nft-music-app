@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CharacterCard } from '@/components/CharacterCard'
+import { SVGDefs, RoleGlyph, Tape, Scribble, PortraitPlaceholder } from '@/components/punk-primitives'
 import { supabase, type Character } from '@/lib/supabase'
 import { getRoleLabel } from '@/lib/fusion'
 import { formatGenre } from '@/lib/utils'
@@ -38,6 +39,7 @@ export default function CollectionPage() {
   const [copiedPositive, setCopiedPositive] = useState(false)
   const [copiedNegative, setCopiedNegative] = useState(false)
   const [adminMode, setAdminMode] = useState(false)
+  const [progressSynced, setProgressSynced] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const promptsFileRef = useRef<HTMLInputElement>(null)
@@ -87,6 +89,13 @@ export default function CollectionPage() {
   const genres = ['all', ...Array.from(new Set(roleCharacters.map(c => c.genre)))]
   const allSelected = ROLES.every(r => selected[r] !== null)
 
+  const totals = useMemo(() => ({
+    rhythm: characters.filter(r => r.role === 'rhythm').length,
+    melody: characters.filter(r => r.role === 'melody').length,
+    vocals: characters.filter(r => r.role === 'vocals').length,
+  }), [characters])
+
+  const total = totals.rhythm + totals.melody + totals.vocals
   const withImage = characters.filter(c => c.image_url).length
 
   function handleSelect(char: CharacterWithImage) {
@@ -155,397 +164,802 @@ export default function CollectionPage() {
     }
   }
 
-  const prompt = detailChar ? getPrompt(detailChar.id) : null
+  const promptFor = (c: CharacterWithImage) => {
+    const custom = getPrompt(c.id)
+    if (custom) return { positive: custom.positive_prompt, negative: NEGATIVE_PROMPT }
+    const trait = c.public_metadata.kit_type || c.public_metadata.instrument || c.public_metadata.vocal_style || ''
+    const positive = `${c.role} character, ${c.genre} musician, ${trait}, punk zine portrait, halftone, photocopy texture, marker outline, high contrast, dramatic lighting`
+    return { positive, negative: NEGATIVE_PROMPT }
+  }
+
+  const prompt = detailChar ? promptFor(detailChar) : null
+  const bandList = ROLES.map(r => selected[r]).filter(Boolean) as CharacterWithImage[]
 
   return (
-    <main className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="border-b border-steel px-8 py-4 flex items-center justify-between sticky top-0 bg-void/95 backdrop-blur z-20">
-        <button onClick={() => router.push('/')}
-          className="font-display text-2xl tracking-widest text-blood hover:text-crimson transition-colors">
-          SOUNDFORGE
-        </button>
-        <div className="flex items-center gap-4">
-          {/* Admin mode toggle */}
-          <button
-            onClick={() => { setAdminMode(!adminMode); setDetailChar(null) }}
-            className={`font-mono text-xs tracking-widest uppercase px-4 py-2 border transition-colors ${
-              adminMode
-                ? 'border-gold text-gold bg-gold/10'
-                : 'border-ash text-smoke hover:border-bone hover:text-bone'
-            }`}
-          >
-            {adminMode ? '⚙ Modo Admin ON' : '⚙ Modo Admin'}
-          </button>
-          <span className="font-mono text-xs text-smoke">Demo · 0xDEMO...1234</span>
+    <div style={{ minHeight: '100vh', position: 'relative' }}>
+      <SVGDefs />
+
+      {/* ══════ HEADER ══════ */}
+      <header
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 50,
+          background: 'var(--ink)',
+          color: 'var(--paper)',
+          borderBottom: '3px solid var(--paper)',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1480,
+            margin: '0 auto',
+            padding: '14px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 16,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <button
+              onClick={() => router.push('/')}
+              className="display"
+              style={{
+                fontSize: 32,
+                lineHeight: 1,
+                letterSpacing: '.02em',
+                background: 'none',
+                border: 'none',
+                color: 'var(--paper)',
+                cursor: 'pointer',
+              }}
+            >
+              SOUND<span style={{ color: 'var(--accent)' }}>FORGE</span>
+            </button>
+            <div
+              className="font-mono"
+              style={{
+                fontSize: 9,
+                letterSpacing: '.3em',
+                color: 'var(--paper)',
+                opacity: 0.65,
+                paddingLeft: 10,
+                borderLeft: '1px solid var(--paper)',
+              }}
+            >
+              v0.3 &middot; 333 STEMS &middot; DEMO
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button
+              onClick={() => { setAdminMode(v => !v); setDetailChar(null) }}
+              className="chip"
+              style={{
+                background: adminMode ? 'var(--accent)' : 'transparent',
+                color: 'var(--paper)',
+                borderColor: 'var(--paper)',
+                padding: '8px 12px',
+                fontSize: 10,
+              }}
+            >
+              {adminMode ? '\u25C9 ADMIN ON' : '\u25CB ADMIN'}
+            </button>
+            <div
+              className="font-mono"
+              style={{
+                fontSize: 10,
+                letterSpacing: '.2em',
+                padding: '8px 12px',
+                border: '1px solid var(--paper)',
+                opacity: 0.6,
+                color: 'var(--paper)',
+              }}
+            >
+              0xDEMO...CAFE
+            </div>
+          </div>
         </div>
+        {/* riot tape strip */}
+        <div className="diag-stripes" style={{ height: 12, opacity: 0.65 }} />
       </header>
 
-      <div className="flex flex-1">
-        {/* Sidebar */}
-        <aside className="w-72 border-r border-steel p-6 flex flex-col gap-6 sticky top-[57px] h-[calc(100vh-57px)] overflow-y-auto">
-
-          {/* Admin mode tools */}
-          {adminMode ? (
-            <div className="space-y-4">
-              <div>
-                <h2 className="font-display text-xl tracking-wider mb-1 text-gold">MODO ADMIN</h2>
-                <p className="font-mono text-xs text-smoke">Haz clic en un personaje para ver su prompt y subir imagen</p>
-              </div>
-
-              {/* Progress */}
-              <div className="border border-steel p-4">
-                <div className="flex justify-between mb-2">
-                  <span className="label">Progreso de arte</span>
-                  <span className="font-mono text-xs text-blood">
-                    {withImage}/{characters.length}
-                  </span>
-                </div>
-                <div className="h-1 bg-steel">
-                  <div className="h-full bg-blood transition-all"
-                    style={{ width: `${characters.length ? (withImage / characters.length) * 100 : 0}%` }} />
-                </div>
-                <div className="font-mono text-xs text-smoke mt-1 text-right">
-                  {characters.length ? Math.round((withImage / characters.length) * 100) : 0}% completo
-                </div>
-              </div>
-
-              {/* Load prompts */}
-              <div>
-                <input
-                  ref={promptsFileRef}
-                  type="file"
-                  accept=".json"
-                  onChange={handleLoadPrompts}
-                  className="hidden"
-                />
-                <button
-                  onClick={() => promptsFileRef.current?.click()}
-                  className={`w-full font-mono text-xs tracking-widest uppercase py-3 border transition-colors ${
-                    promptsLoaded
-                      ? 'border-blood text-blood bg-blood/5'
-                      : 'border-ash text-smoke hover:border-bone hover:text-bone'
-                  }`}
-                >
-                  {promptsLoaded
-                    ? `✓ Prompts cargados (${artPrompts.length})`
-                    : '↑ Cargar art_prompts.json'}
-                </button>
-                {!promptsLoaded && (
-                  <p className="font-mono text-xs text-smoke/50 mt-2">
-                    Genera el archivo corriendo:<br />
-                    <code className="text-bone">python generate_art_prompts.py</code>
-                  </p>
-                )}
-              </div>
-
-              {/* Selected char info */}
-              {detailChar && (
-                <div className="border border-gold/30 bg-gold/5 p-3">
-                  <div className="label text-gold mb-1">Personaje activo</div>
-                  <div className="font-display text-base tracking-wider">{detailChar.name}</div>
-                  <div className="font-mono text-xs text-smoke">{detailChar.role} · {formatGenre(detailChar.genre)}</div>
-                </div>
-              )}
-            </div>
-          ) : (
+      {/* ══════ MAIN GRID ══════ */}
+      <div
+        style={{
+          maxWidth: 1480,
+          margin: '0 auto',
+          padding: '28px 24px 80px',
+          display: 'grid',
+          gridTemplateColumns: 'minmax(260px, 300px) 1fr',
+          gap: 28,
+          alignItems: 'flex-start',
+        }}
+      >
+        {/* ══════ SIDEBAR ══════ */}
+        <aside style={{ position: 'sticky', top: 110, display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {!adminMode ? (
             <>
-              {/* Normal play mode */}
-              <div>
-                <h2 className="font-display text-xl tracking-wider mb-1">TU BANDA</h2>
-                <p className="font-mono text-xs text-smoke">Selecciona uno de cada rol</p>
-              </div>
-
-              {ROLES.map(role => (
-                <div key={role}>
-                  <div className="label mb-2">{getRoleLabel(role)}</div>
-                  {selected[role] ? (
-                    <motion.div
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="card border-blood/40 p-3"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          {selected[role]!.image_url && (
-                            <img src={selected[role]!.image_url!}
-                              className="w-8 h-8 object-cover border border-ash/30" alt="" />
-                          )}
-                          <div>
-                            <div className="font-display text-base tracking-wider">{selected[role]!.name}</div>
-                            <div className="font-mono text-xs text-smoke">{selected[role]!.public_metadata.genre}</div>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => setSelected(p => ({ ...p, [role]: null }))}
-                          className="text-smoke hover:text-blood transition-colors text-lg"
-                        >×</button>
-                      </div>
-                    </motion.div>
-                  ) : (
-                    <div className="border border-dashed border-ash/40 p-3 text-center">
-                      <span className="font-mono text-xs text-smoke/50">Sin selección</span>
-                    </div>
-                  )}
+              {/* BAND */}
+              <div className="paper-card" style={{ padding: 20, position: 'relative' }}>
+                <Tape rotate={-3} text="BAND ROSTER" style={{ top: -14, left: 14, width: 160, height: 22 }} />
+                <div className="display" style={{ fontSize: 30, lineHeight: 1, marginTop: 8 }}>
+                  YOUR <span className="scribble-under">BAND</span>
                 </div>
-              ))}
+                <div
+                  className="font-mono"
+                  style={{ fontSize: 10, letterSpacing: '.2em', color: 'var(--pencil)', marginTop: 6 }}
+                >
+                  PICK 3 STEMS &middot; {bandList.length}/3
+                </div>
 
-              <div className="mt-auto">
-                {allSelected && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-3 p-3 border border-blood/20 bg-blood/5"
-                  >
-                    <p className="font-mono text-xs text-blood text-center">¡Banda lista!</p>
-                  </motion.div>
-                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 18 }}>
+                  {ROLES.map(role => (
+                    <BandSlot
+                      key={role}
+                      role={role}
+                      char={selected[role]}
+                      onClear={() => setSelected(p => ({ ...p, [role]: null }))}
+                      onJump={() => setActiveRole(role)}
+                      isActive={activeRole === role}
+                    />
+                  ))}
+                </div>
+
                 <button
+                  className="btn-punk btn-punk-primary"
                   onClick={handleFuse}
                   disabled={!allSelected}
-                  className={`w-full btn-primary py-4 ${!allSelected ? 'opacity-30 cursor-not-allowed' : ''}`}
+                  style={{ width: '100%', marginTop: 18, fontSize: 22, padding: '14px 12px' }}
                 >
                   ⚡ FORGE SONG
                 </button>
+                {!allSelected && (
+                  <div
+                    className="font-mono"
+                    style={{
+                      textAlign: 'center',
+                      fontSize: 10,
+                      color: 'var(--pencil)',
+                      marginTop: 8,
+                      letterSpacing: '.15em',
+                    }}
+                  >
+                    [LOCKED &middot; NEED 3 STEMS]
+                  </div>
+                )}
+              </div>
+
+              {/* howto card */}
+              <div className="paper-card" style={{ padding: 16, background: 'var(--ink)', color: 'var(--paper)' }}>
+                <div className="font-mono" style={{ fontSize: 10, letterSpacing: '.25em' }}>HOWTO</div>
+                <div className="font-body" style={{ fontSize: 12, lineHeight: 1.5, marginTop: 8, opacity: 0.85 }}>
+                  Pick one rhythm, one melody, one voice. Hit the big red. Eat the result.
+                </div>
               </div>
             </>
+          ) : (
+            <AdminSidebar
+              total={total}
+              withImage={withImage}
+              progressSynced={progressSynced}
+              promptsLoaded={promptsLoaded}
+              setProgressSynced={setProgressSynced}
+              onLoadPrompts={() => promptsFileRef.current?.click()}
+              selected={detailChar}
+            />
           )}
+          {/* hidden file inputs */}
+          <input
+            ref={promptsFileRef}
+            type="file"
+            accept=".json"
+            onChange={handleLoadPrompts}
+            className="hidden"
+            style={{ display: 'none' }}
+          />
         </aside>
 
-        {/* Main content */}
-        <div className="flex-1 flex flex-col">
-
-          {/* Detail panel (admin mode) */}
+        {/* ══════ MAIN CONTENT ══════ */}
+        <main style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {/* Admin detail panel */}
           <AnimatePresence>
             {adminMode && detailChar && (
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="border-b border-steel bg-iron/30 p-6"
               >
-                <div className="flex gap-6 max-w-4xl">
-                  {/* Image */}
-                  <div className="w-24 h-24 flex-shrink-0 bg-steel/30 border border-ash/30 overflow-hidden relative">
-                    {detailChar.image_url ? (
-                      <img src={detailChar.image_url} alt={detailChar.name}
-                        className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <span className="text-2xl opacity-20">♪</span>
-                      </div>
-                    )}
-                    {uploadSuccess && (
-                      <div className="absolute inset-0 bg-blood/30 flex items-center justify-center">
-                        <span className="text-white">✓</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Info + actions */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <div className="label mb-0.5">{detailChar.role} · {formatGenre(detailChar.genre)}</div>
-                        <h2 className="font-display text-2xl tracking-wider">{detailChar.name}</h2>
-                        <div className="font-mono text-xs text-smoke">{detailChar.id}</div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {/* Upload button */}
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          onChange={handleUpload}
-                          className="hidden"
-                        />
-                        <button
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={uploading}
-                          className="btn-primary flex items-center gap-2 py-2 px-4 text-xs"
-                        >
-                          {uploading ? (
-                            <>
-                              <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              Subiendo...
-                            </>
-                          ) : (
-                            `↑ ${detailChar.image_url ? 'Reemplazar' : 'Subir imagen'}`
-                          )}
-                        </button>
-                        {uploadSuccess && (
-                          <span className="font-mono text-xs text-blood">✓ Guardado</span>
-                        )}
-                        <button
-                          onClick={() => setDetailChar(null)}
-                          className="font-mono text-smoke hover:text-bone transition-colors text-xl leading-none"
-                        >×</button>
-                      </div>
-                    </div>
-
-                    {/* Prompts */}
-                    {!promptsLoaded ? (
-                      <div className="border border-gold/30 bg-gold/5 px-4 py-2">
-                        <p className="font-mono text-xs text-gold">
-                          Carga <code>art_prompts.json</code> en el panel izquierdo para ver el prompt de ComfyUI
-                        </p>
-                      </div>
-                    ) : prompt ? (
-                      <div className="space-y-2">
-                        {/* Positive */}
-                        <div className="bg-steel/20 border border-ash/20 p-3">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="label text-[10px]">Positive Prompt</span>
-                            <button
-                              onClick={() => copyText(prompt.positive_prompt, 'positive')}
-                              className="font-mono text-xs text-smoke hover:text-bone border border-ash/40 hover:border-bone px-2 py-0.5 transition-colors"
-                            >
-                              {copiedPositive ? '✓ Copiado' : 'Copiar'}
-                            </button>
-                          </div>
-                          <p className="font-mono text-xs text-silver leading-relaxed line-clamp-2">
-                            {prompt.positive_prompt}
-                          </p>
-                        </div>
-                        {/* Negative */}
-                        <div className="bg-steel/10 border border-ash/10 p-3">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="label text-[10px]">Negative Prompt</span>
-                            <button
-                              onClick={() => copyText(NEGATIVE_PROMPT, 'negative')}
-                              className="font-mono text-xs text-smoke hover:text-bone border border-ash/40 hover:border-bone px-2 py-0.5 transition-colors"
-                            >
-                              {copiedNegative ? '✓ Copiado' : 'Copiar'}
-                            </button>
-                          </div>
-                          <p className="font-mono text-xs text-smoke/50 leading-relaxed line-clamp-1">
-                            {NEGATIVE_PROMPT}
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="font-mono text-xs text-smoke">
-                        No se encontró prompt para <code>{detailChar.id}</code>
-                      </p>
-                    )}
-                  </div>
-                </div>
+                <AdminDetail
+                  char={detailChar}
+                  image={detailChar.image_url || undefined}
+                  uploading={uploading}
+                  uploadSuccess={uploadSuccess}
+                  fileInputRef={fileInputRef}
+                  onUpload={handleUpload}
+                  onCopy={copyText}
+                  copiedPositive={copiedPositive}
+                  copiedNegative={copiedNegative}
+                  prompts={prompt!}
+                  promptsLoaded={promptsLoaded}
+                  onClose={() => setDetailChar(null)}
+                />
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Character grid area */}
-          <div className="flex-1 p-8 overflow-y-auto">
-            {/* Stats */}
-            {!loading && (
-              <div className="flex gap-6 mb-6">
-                {ROLES.map(role => (
-                  <span key={role} className="font-mono text-xs text-smoke">
-                    {getRoleLabel(role)}: <span className="text-bone">{characters.filter(c => c.role === role).length}</span>
-                  </span>
-                ))}
-                <span className="font-mono text-xs text-smoke">
-                  Total: <span className="text-blood">{characters.length}</span>
-                </span>
-                {adminMode && (
-                  <span className="font-mono text-xs text-smoke">
-                    Con imagen: <span className="text-blood">{withImage}</span>
-                  </span>
-                )}
+          {/* STATS BAR */}
+          {!loading && (
+            <div
+              className="paper-card"
+              style={{
+                padding: '14px 18px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                flexWrap: 'wrap',
+              }}
+            >
+              <StatPill label="RHYTHM" value={totals.rhythm} accent={!!selected.rhythm} />
+              <StatPill label="MELODY" value={totals.melody} accent={!!selected.melody} />
+              <StatPill label="VOCALS" value={totals.vocals} accent={!!selected.vocals} />
+              <div style={{ flex: 1, minWidth: 20 }} />
+              <div className="font-mono" style={{ fontSize: 11, letterSpacing: '.25em', color: 'var(--pencil)' }}>
+                TOTAL
               </div>
-            )}
+              <div className="display" style={{ fontSize: 36, lineHeight: 1 }}>{total}</div>
+            </div>
+          )}
 
-            {/* Role tabs */}
-            <div className="flex gap-0 mb-6 border border-steel w-fit">
-              {ROLES.map(role => (
-                <button
-                  key={role}
-                  onClick={() => { setActiveRole(role); setFilter('all') }}
-                  className={`font-mono text-xs tracking-widest uppercase px-6 py-3 transition-colors
-                    ${activeRole === role ? 'bg-blood text-white' : 'text-smoke hover:text-bone'}`}
+          {/* ROLE TABS */}
+          <div style={{ display: 'flex', gap: 0, position: 'relative' }}>
+            {ROLES.map(role => (
+              <button
+                key={role}
+                onClick={() => { setActiveRole(role); setFilter('all') }}
+                className="display"
+                style={{
+                  flex: 1,
+                  padding: '16px 18px',
+                  background: activeRole === role ? 'var(--ink)' : 'var(--paper)',
+                  color: activeRole === role ? 'var(--paper)' : 'var(--ink)',
+                  border: '2px solid var(--ink)',
+                  borderRight: 'none',
+                  fontSize: 22,
+                  letterSpacing: '.06em',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                }}
+              >
+                <RoleGlyph
+                  role={role}
+                  size={28}
+                  ink={activeRole === role ? 'var(--paper)' : 'var(--ink)'}
+                  accent="var(--accent)"
+                />
+                {getRoleLabel(role)}
+                <span
+                  className="font-mono"
+                  style={{ fontSize: 10, opacity: 0.7, marginLeft: 'auto', letterSpacing: '.2em' }}
                 >
-                  {getRoleLabel(role)}
-                  {!adminMode && selected[role] && (
-                    <span className="ml-2 w-2 h-2 bg-white rounded-full inline-block" />
-                  )}
+                  {totals[role as keyof typeof totals]}
+                </span>
+                {activeRole === role && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      bottom: -3,
+                      height: 3,
+                      background: 'var(--accent)',
+                    }}
+                  />
+                )}
+              </button>
+            ))}
+            {/* close right border */}
+            <div style={{ position: 'absolute', right: -2, top: 0, bottom: 0, width: 2, background: 'var(--ink)' }} />
+          </div>
+
+          {/* GENRE FILTERS */}
+          {!loading && (
+            <div
+              className="paper-card"
+              style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}
+            >
+              <div
+                className="font-mono"
+                style={{ fontSize: 10, letterSpacing: '.3em', color: 'var(--pencil)', marginRight: 6 }}
+              >
+                GENRE /
+              </div>
+              {genres.map(g => (
+                <button
+                  key={g}
+                  onClick={() => setFilter(g)}
+                  className={`chip chip-accent ${filter === g ? 'chip-on' : ''}`}
+                >
+                  {g === 'all' ? 'ALL' : g.toUpperCase().replace('_', ' ')}
                 </button>
               ))}
+              <div style={{ flex: 1, minWidth: 20 }} />
+              <div className="font-mono" style={{ fontSize: 10, letterSpacing: '.2em', color: 'var(--pencil)' }}>
+                SHOWING {filtered.length}/{totals[activeRole as keyof typeof totals]}
+              </div>
             </div>
+          )}
 
-            {/* Genre filter */}
-            {!loading && (
-              <div className="flex gap-2 mb-6 flex-wrap">
-                {genres.map(g => (
-                  <button
-                    key={g}
-                    onClick={() => setFilter(g)}
-                    className={`font-mono text-xs tracking-widest uppercase px-3 py-1.5 border transition-colors
-                      ${filter === g ? 'border-bone text-bone bg-steel' : 'border-ash/40 text-smoke hover:border-smoke'}`}
-                  >
-                    {g === 'all' ? 'Todos' : g.replace('_', ' ')}
-                  </button>
+          {/* LOADING */}
+          {loading && (
+            <div className="paper-card" style={{ padding: 60, textAlign: 'center' }}>
+              <div className="display" style={{ fontSize: 28 }}>LOADING...</div>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 3, marginTop: 16 }}>
+                {[...Array(12)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="waveform-bar"
+                    style={{
+                      width: 4,
+                      height: 20 + Math.sin(i * 0.8) * 12,
+                      background: 'var(--ink)',
+                    }}
+                  />
                 ))}
               </div>
-            )}
-
-            {/* Loading */}
-            {loading && (
-              <div className="flex items-center justify-center h-64">
-                <div className="text-center">
-                  <div className="flex items-center gap-1 h-10 justify-center mb-4">
-                    {[...Array(10)].map((_, i) => (
-                      <div key={i} className="w-1 bg-blood rounded-sm waveform-bar"
-                        style={{ height: `${15 + Math.sin(i * 0.8) * 10}px` }} />
-                    ))}
-                  </div>
-                  <span className="font-mono text-xs text-smoke">Cargando personajes...</span>
-                </div>
+              <div className="font-mono" style={{ fontSize: 10, color: 'var(--pencil)', marginTop: 12, letterSpacing: '.2em' }}>
+                FETCHING STEMS FROM SUPABASE...
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Grid */}
-            {!loading && (
-              <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <AnimatePresence>
-                  {filtered.map((char, i) => (
-                    <motion.div
-                      key={char.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ delay: Math.min(i * 0.03, 0.3) }}
-                      className="relative"
-                    >
-                      {/* Admin mode: image status indicator */}
-                      {adminMode && (
-                        <div className={`absolute top-2 right-2 z-10 w-5 h-5 flex items-center justify-center text-xs font-mono
-                          ${char.image_url ? 'bg-blood text-white' : 'bg-ash/50 text-smoke'}`}>
-                          {char.image_url ? '✓' : '○'}
-                        </div>
-                      )}
-                      <CharacterCard
-                        character={char}
-                        selected={
-                          adminMode
-                            ? detailChar?.id === char.id
-                            : selected[char.role]?.id === char.id
-                        }
-                        onClick={() => handleSelect(char)}
-                      />
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </motion.div>
-            )}
+          {/* GRID */}
+          {!loading && (
+            <motion.div
+              layout
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                gap: 22,
+                paddingTop: 8,
+              }}
+            >
+              <AnimatePresence>
+                {filtered.map((char, i) => (
+                  <motion.div
+                    key={char.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ delay: Math.min(i * 0.03, 0.3) }}
+                  >
+                    <CharacterCard
+                      character={char}
+                      selected={
+                        adminMode
+                          ? detailChar?.id === char.id
+                          : selected[char.role]?.id === char.id
+                      }
+                      hasImage={!!char.image_url}
+                      adminMode={adminMode}
+                      onClick={() => handleSelect(char)}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          )}
 
-            {!loading && filtered.length === 0 && (
-              <div className="text-center py-24">
-                <p className="font-mono text-sm text-smoke">Sin personajes para este filtro</p>
+          {!loading && filtered.length === 0 && (
+            <div className="paper-card" style={{ padding: 40, textAlign: 'center' }}>
+              <div className="display" style={{ fontSize: 36 }}>NOTHING HERE.</div>
+              <div className="font-body" style={{ fontSize: 14, marginTop: 8, color: 'var(--pencil)' }}>
+                Try another genre, or another role.
               </div>
-            )}
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════
+   SUB-COMPONENTS
+   ═══════════════════════════════════════════════════════ */
+
+function StatPill({ label, value, accent }: { label: string; value: number; accent: boolean }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginRight: 18 }}>
+      <div
+        className="font-mono"
+        style={{ fontSize: 10, letterSpacing: '.25em', color: accent ? 'var(--accent)' : 'var(--pencil)' }}
+      >
+        {label}
+      </div>
+      <div
+        className="display"
+        style={{ fontSize: 30, lineHeight: 1, color: accent ? 'var(--accent)' : 'var(--ink)' }}
+      >
+        {value}
+      </div>
+    </div>
+  )
+}
+
+function BandSlot({
+  role,
+  char,
+  onClear,
+  onJump,
+  isActive,
+}: {
+  role: string
+  char: CharacterWithImage | null
+  onClear: () => void
+  onJump: () => void
+  isActive: boolean
+}) {
+  const label = getRoleLabel(role)
+  if (!char) {
+    return (
+      <button
+        onClick={onJump}
+        style={{
+          padding: '10px 12px',
+          textAlign: 'left',
+          cursor: 'pointer',
+          background: isActive ? 'var(--paper-2)' : 'transparent',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          border: '2px dashed var(--ink)',
+        }}
+      >
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            border: '2px dashed var(--ink)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <RoleGlyph role={role} size={26} />
+        </div>
+        <div>
+          <div className="font-mono" style={{ fontSize: 10, letterSpacing: '.2em', color: 'var(--pencil)' }}>
+            SLOT &middot; {label}
           </div>
+          <div className="display" style={{ fontSize: 18, lineHeight: 1, color: 'var(--pencil)' }}>EMPTY</div>
+        </div>
+      </button>
+    )
+  }
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '8px 10px',
+        background: 'var(--ink)',
+        color: 'var(--paper)',
+        border: '2px solid var(--ink)',
+        position: 'relative',
+      }}
+    >
+      <div
+        style={{
+          width: 40,
+          height: 40,
+          background: 'var(--paper)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: '1px solid var(--paper)',
+        }}
+      >
+        <RoleGlyph role={role} size={28} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="font-mono" style={{ fontSize: 9, letterSpacing: '.25em', color: 'var(--accent)' }}>
+          {label} &middot; {char.genre?.toUpperCase()}
+        </div>
+        <div
+          className="display"
+          style={{
+            fontSize: 18,
+            lineHeight: 1,
+            color: 'var(--paper)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {char.name}
         </div>
       </div>
-    </main>
+      <button
+        onClick={onClear}
+        className="font-mono"
+        style={{
+          background: 'transparent',
+          color: 'var(--paper)',
+          border: '1px solid var(--paper)',
+          padding: '4px 6px',
+          fontSize: 10,
+          cursor: 'pointer',
+        }}
+      >
+        ✕
+      </button>
+    </div>
+  )
+}
+
+function AdminSidebar({
+  total,
+  withImage,
+  progressSynced,
+  promptsLoaded,
+  setProgressSynced,
+  onLoadPrompts,
+  selected,
+}: {
+  total: number
+  withImage: number
+  progressSynced: boolean
+  promptsLoaded: boolean
+  setProgressSynced: (v: boolean) => void
+  onLoadPrompts: () => void
+  selected: CharacterWithImage | null
+}) {
+  const pct = total ? (withImage / total) * 100 : 0
+  return (
+    <>
+      <div className="paper-card" style={{ padding: 18, background: 'var(--accent)', color: 'var(--paper)' }}>
+        <Tape rotate={-2} text="ADMIN MODE" style={{ top: -14, left: 14, width: 140, height: 22 }} variant="green" />
+        <div className="font-mono" style={{ fontSize: 10, letterSpacing: '.25em', marginTop: 4 }}>ART PROGRESS</div>
+        <div className="display" style={{ fontSize: 38, lineHeight: 1, marginTop: 4 }}>
+          {withImage}<span style={{ opacity: 0.6, fontSize: 22 }}>/{total}</span>
+        </div>
+        <div
+          style={{
+            height: 12,
+            border: '2px solid var(--paper)',
+            marginTop: 10,
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <div style={{ position: 'absolute', inset: 0, width: `${pct}%`, background: 'var(--paper)' }} />
+        </div>
+        <div className="font-mono" style={{ fontSize: 9, letterSpacing: '.2em', marginTop: 6, opacity: 0.85 }}>
+          {pct.toFixed(1)}% COMPLETE &middot; {total - withImage} TO GO
+        </div>
+      </div>
+
+      <div className="paper-card" style={{ padding: 16 }}>
+        <div className="font-mono" style={{ fontSize: 10, letterSpacing: '.25em', color: 'var(--pencil)' }}>TOOLS</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+          <button className="btn-punk" onClick={onLoadPrompts} style={{ fontSize: 13, padding: '10px 12px' }}>
+            {promptsLoaded ? '\u2713 PROMPTS LOADED' : '\u2913 LOAD art_prompts.json'}
+          </button>
+          <button
+            className="btn-punk"
+            onClick={() => setProgressSynced(!progressSynced)}
+            style={{ fontSize: 13, padding: '10px 12px' }}
+          >
+            {progressSynced ? '\u2713 PROGRESS SYNCED' : '\u21BB SYNC PROGRESS'}
+          </button>
+        </div>
+      </div>
+
+      <div className="paper-card" style={{ padding: 16, minHeight: 100 }}>
+        <div className="font-mono" style={{ fontSize: 10, letterSpacing: '.25em', color: 'var(--pencil)' }}>SELECTED</div>
+        {selected ? (
+          <>
+            <div className="display" style={{ fontSize: 22, lineHeight: 1, marginTop: 6 }}>{selected.name}</div>
+            <div className="font-mono" style={{ fontSize: 10, letterSpacing: '.2em', color: 'var(--pencil)', marginTop: 4 }}>
+              {getRoleLabel(selected.role)} &middot; {formatGenre(selected.genre)} &middot;{' '}
+              {selected.public_metadata.kit_type || selected.public_metadata.instrument || selected.public_metadata.vocal_style || ''}
+            </div>
+            <div className="font-mono" style={{ fontSize: 9, letterSpacing: '.15em', color: 'var(--pencil)', marginTop: 4 }}>
+              ID/{selected.id}
+            </div>
+          </>
+        ) : (
+          <div className="font-body" style={{ fontSize: 12, color: 'var(--pencil)', marginTop: 6 }}>
+            Click a card to inspect it.
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
+function AdminDetail({
+  char,
+  image,
+  uploading,
+  uploadSuccess,
+  fileInputRef,
+  onUpload,
+  onCopy,
+  copiedPositive,
+  copiedNegative,
+  prompts,
+  promptsLoaded,
+  onClose,
+}: {
+  char: CharacterWithImage
+  image?: string
+  uploading: boolean
+  uploadSuccess: boolean
+  fileInputRef: React.RefObject<HTMLInputElement>
+  onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onCopy: (text: string, type: 'positive' | 'negative') => void
+  copiedPositive: boolean
+  copiedNegative: boolean
+  prompts: { positive: string; negative: string }
+  promptsLoaded: boolean
+  onClose: () => void
+}) {
+  return (
+    <div
+      className="paper-card"
+      style={{ padding: 22, position: 'relative', borderColor: 'var(--accent)', borderWidth: 3 }}
+    >
+      <div className="sticker" style={{ top: -16, left: 22, transform: 'rotate(-3deg)' }}>EDIT MODE</div>
+      <button
+        onClick={onClose}
+        className="btn-punk btn-punk-ghost"
+        style={{ position: 'absolute', top: 12, right: 12, padding: '6px 10px', fontSize: 12 }}
+      >
+        ✕
+      </button>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 22, alignItems: 'flex-start' }}>
+        {/* image preview */}
+        <div style={{ width: 200 }}>
+          <div
+            style={{
+              width: 200,
+              height: 200,
+              border: '2px solid var(--ink)',
+              background: 'var(--paper-2)',
+              position: 'relative',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {image ? (
+              <>
+                <img src={image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                {uploadSuccess && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'rgba(255,34,48,0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <span style={{ color: 'var(--paper)', fontSize: 32 }}>{'\u2713'}</span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <PortraitPlaceholder char={char} size="lg" />
+            )}
+          </div>
+          <label
+            className="btn-punk"
+            style={{ display: 'block', textAlign: 'center', marginTop: 10, fontSize: 13, cursor: 'pointer' }}
+          >
+            {uploading ? '\u21BB UPLOADING...' : image ? '\u21BB REPLACE' : '\u2913 UPLOAD'}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={onUpload}
+              style={{ display: 'none' }}
+            />
+          </label>
+        </div>
+
+        <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div>
+            <div className="font-mono" style={{ fontSize: 10, letterSpacing: '.25em', color: 'var(--pencil)' }}>
+              ID/{char.id}
+            </div>
+            <div className="display" style={{ fontSize: 36, lineHeight: 1, marginTop: 4 }}>{char.name}</div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+              <span className="chip chip-on">{getRoleLabel(char.role)}</span>
+              <span className="chip">{formatGenre(char.genre)}</span>
+              <span className="chip">
+                {char.public_metadata.kit_type || char.public_metadata.instrument || char.public_metadata.vocal_style || ''}
+              </span>
+              <span className="chip">R{char.rarity_score}</span>
+            </div>
+          </div>
+
+          {/* Prompts */}
+          <PromptBlock
+            label="POSITIVE"
+            text={prompts.positive}
+            onCopy={() => onCopy(prompts.positive, 'positive')}
+            copied={copiedPositive}
+            variant="ink"
+          />
+          <PromptBlock
+            label="NEGATIVE"
+            text={prompts.negative}
+            onCopy={() => onCopy(prompts.negative, 'negative')}
+            copied={copiedNegative}
+            variant="paper"
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function PromptBlock({
+  label,
+  text,
+  onCopy,
+  copied,
+  variant,
+}: {
+  label: string
+  text: string
+  onCopy: () => void
+  copied: boolean
+  variant: 'ink' | 'paper'
+}) {
+  const dark = variant === 'ink'
+  return (
+    <div
+      style={{
+        border: '2px solid var(--ink)',
+        background: dark ? 'var(--ink)' : 'var(--paper-2)',
+        color: dark ? 'var(--paper)' : 'var(--ink)',
+        padding: 12,
+        position: 'relative',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        <div className="font-mono" style={{ fontSize: 10, letterSpacing: '.3em', opacity: 0.8 }}>{label}</div>
+        <button
+          onClick={onCopy}
+          className="font-mono"
+          style={{
+            fontSize: 10,
+            letterSpacing: '.2em',
+            background: copied ? 'var(--accent)' : (dark ? 'var(--paper)' : 'var(--ink)'),
+            color: copied ? 'var(--paper)' : (dark ? 'var(--ink)' : 'var(--paper)'),
+            border: 'none',
+            padding: '4px 8px',
+            cursor: 'pointer',
+          }}
+        >
+          {copied ? '\u2713 COPIED' : 'COPY'}
+        </button>
+      </div>
+      <div className="font-body" style={{ fontSize: 13, lineHeight: 1.5, wordBreak: 'break-word' }}>
+        {text}
+      </div>
+    </div>
   )
 }

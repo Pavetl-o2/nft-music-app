@@ -1,103 +1,157 @@
 'use client'
 
-import { motion } from 'framer-motion'
 import { cn, formatGenre } from '@/lib/utils'
 import type { Character } from '@/lib/supabase'
+import { RoleGlyph, PortraitPlaceholder, Tape } from './punk-primitives'
 
 interface CharacterCardProps {
-  character: Character
+  character: Character & { image_url?: string | null }
   selected?: boolean
   onClick?: () => void
   compact?: boolean
+  adminMode?: boolean
+  hasImage?: boolean
 }
 
-const ROLE_COLORS = {
-  rhythm: 'border-amber/40 hover:border-amber',
-  melody: 'border-blood/40 hover:border-blood',
-  vocals: 'border-silver/40 hover:border-silver',
+const TAPE_VARIANTS: Record<string, 'yellow' | 'green'> = {
+  rhythm: 'yellow',
+  melody: 'yellow',
+  vocals: 'green',
 }
 
-const ROLE_ACCENT = {
-  rhythm: 'text-amber',
-  melody: 'text-blood',
-  vocals: 'text-silver',
-}
-
-const ROLE_ICONS = {
-  rhythm: '🥁',
-  melody: '🎸',
-  vocals: '🎤',
-}
-
-export function CharacterCard({ character, selected, onClick, compact }: CharacterCardProps) {
-  const trait = character.public_metadata.kit_type 
-    || character.public_metadata.instrument 
-    || character.public_metadata.vocal_style 
+export function CharacterCard({ character, selected, onClick, compact, adminMode, hasImage }: CharacterCardProps) {
+  const trait = character.public_metadata.kit_type
+    || character.public_metadata.instrument
+    || character.public_metadata.vocal_style
     || ''
 
+  // pseudo-stable seed from id for per-card visual variation
+  const seed = character.id.charCodeAt(character.id.length - 1) + character.id.charCodeAt(0)
+  const tilt = ((seed % 7) - 3) * 0.25
+  const tapeRot = ((seed % 5) - 2) * 1.4
+  const stickerRot = ((seed % 9) - 4) * 0.8
+
+  const roleLabel = character.public_metadata.role || character.role.toUpperCase()
+  const num = character.id.split('_').pop()?.replace(/\D/g, '').padStart(3, '0') || '000'
+
   return (
-    <motion.div
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.98 }}
+    <button
+      type="button"
       onClick={onClick}
-      className={cn(
-        'card cursor-pointer transition-all duration-200 border',
-        ROLE_COLORS[character.role],
-        selected && 'border-blood shadow-[0_0_20px_rgba(204,34,0,0.3)]',
-        compact ? 'p-3' : 'p-5'
-      )}
+      className={cn('paper-card no-select text-left w-full', compact ? 'p-3' : 'p-[14px]')}
+      style={{
+        cursor: 'pointer',
+        transform: `rotate(${tilt}deg)`,
+        transition: 'transform .15s ease, box-shadow .15s ease',
+        boxShadow: selected
+          ? `6px 6px 0 0 var(--accent), 6px 6px 0 2px var(--ink)`
+          : '4px 4px 0 0 var(--ink)',
+        outline: selected ? '2px solid var(--ink)' : 'none',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = `rotate(${tilt}deg) translate(-2px, -2px)`
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = `rotate(${tilt}deg)`
+      }}
     >
-      {/* Selected indicator */}
-      {selected && (
-        <div className="absolute top-0 left-0 right-0 h-0.5 bg-blood" />
-      )}
-
-      {/* Top row */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">{ROLE_ICONS[character.role]}</span>
-          <div>
-            <span className={cn('label text-[10px]', ROLE_ACCENT[character.role])}>
-              {character.public_metadata.role}
-            </span>
-          </div>
-        </div>
-        {selected && (
-          <div className="w-5 h-5 bg-blood flex items-center justify-center">
-            <span className="text-white text-xs">✓</span>
-          </div>
-        )}
-      </div>
-
-      {/* Character art placeholder */}
+      {/* portrait */}
       {!compact && (
-        <div className="h-32 mb-3 bg-steel/30 flex items-center justify-center border border-ash/20 relative overflow-hidden">
-          {/* Placeholder silhouette */}
-          <div className="text-5xl opacity-20">♪</div>
-          {/* Scanline overlay */}
-          <div className="absolute inset-0 scanline opacity-30" />
+        <div style={{ position: 'relative' }}>
+          {character.image_url ? (
+            <div
+              style={{
+                width: '100%',
+                height: 160,
+                border: '2px solid var(--ink)',
+                overflow: 'hidden',
+                position: 'relative',
+              }}
+            >
+              <img
+                src={character.image_url}
+                alt={character.name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+              <div className="scanlines" style={{ position: 'absolute', inset: 0, opacity: 0.3 }} />
+            </div>
+          ) : (
+            <PortraitPlaceholder char={{ ...character, num }} />
+          )}
+          {/* tape label on portrait */}
+          <Tape
+            rotate={tapeRot}
+            variant={TAPE_VARIANTS[character.role] || 'yellow'}
+            text={roleLabel}
+            style={{ top: -10, left: 16, width: 110, height: 22 }}
+          />
+          {/* admin status tick */}
+          {adminMode && (
+            <div
+              className="font-mono"
+              style={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                background: hasImage ? 'var(--ink)' : 'var(--paper)',
+                color: hasImage ? 'var(--paper)' : 'var(--ink)',
+                border: '2px solid var(--ink)',
+                width: 26,
+                height: 26,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 14,
+                fontWeight: 700,
+              }}
+            >
+              {hasImage ? '\u2713' : '\u25CB'}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Name */}
-      <h3 className={cn(
-        'font-display tracking-wider leading-none',
-        compact ? 'text-lg' : 'text-2xl'
-      )}>
-        {character.name}
-      </h3>
+      {/* meta block */}
+      <div style={{ marginTop: compact ? 0 : 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+          <div className="font-mono" style={{ fontSize: 10, letterSpacing: '.2em', color: 'var(--pencil)' }}>
+            № {num}
+          </div>
+          <div className="font-mono" style={{ fontSize: 10, letterSpacing: '.15em', color: 'var(--ink)' }}>
+            R{character.rarity_score}
+          </div>
+        </div>
 
-      {/* Genre + Trait */}
-      <div className={cn('flex gap-2 flex-wrap', compact ? 'mt-1' : 'mt-2')}>
-        <span className="font-mono text-xs bg-steel px-2 py-0.5 text-bone">
-          {formatGenre(character.genre)}
-        </span>
-        {trait && (
-          <span className="font-mono text-xs bg-iron px-2 py-0.5 text-smoke border border-ash/30">
-            {trait}
+        <div
+          className="display"
+          style={{ fontSize: compact ? 20 : 28, lineHeight: 0.95, color: 'var(--ink)', wordBreak: 'break-word' }}
+        >
+          {character.name}
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+          <span className="chip" style={{ background: 'var(--ink)', color: 'var(--paper)' }}>
+            {formatGenre(character.genre)}
           </span>
-        )}
+          {trait && <span className="chip">{trait}</span>}
+        </div>
       </div>
-    </motion.div>
+
+      {/* selected sticker */}
+      {selected && !adminMode && (
+        <div
+          className="sticker"
+          style={{
+            top: -14,
+            right: -10,
+            transform: `rotate(${stickerRot + 6}deg)`,
+            fontSize: 14,
+            padding: '6px 12px',
+          }}
+        >
+          ✶ PICKED
+        </div>
+      )}
+    </button>
   )
 }
