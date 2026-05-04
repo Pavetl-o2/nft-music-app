@@ -36,6 +36,7 @@ export default function CollectionPage() {
   const [promptsLoaded, setPromptsLoaded] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadSuccess, setUploadSuccess] = useState(false)
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const [copiedPositive, setCopiedPositive] = useState(false)
   const [copiedNegative, setCopiedNegative] = useState(false)
   const [adminMode, setAdminMode] = useState(false)
@@ -229,6 +230,7 @@ export default function CollectionPage() {
   const bandList = ROLES.map(r => selected[r]).filter(Boolean) as CharacterWithImage[]
 
   return (
+    <>
     <div style={{ minHeight: '100vh', position: 'relative' }}>
       <SVGDefs />
 
@@ -436,6 +438,7 @@ export default function CollectionPage() {
                   prompts={prompt!}
                   promptsLoaded={promptsLoaded}
                   onClose={() => setDetailChar(null)}
+                  onLightbox={setLightboxUrl}
                 />
               </motion.div>
             )}
@@ -618,6 +621,65 @@ export default function CollectionPage() {
         </main>
       </div>
     </div>
+
+    {/* ── LIGHTBOX ── */}
+
+    <AnimatePresence>
+      {lightboxUrl && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          onClick={() => setLightboxUrl(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            background: 'rgba(0,0,0,0.92)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <button
+            onClick={() => setLightboxUrl(null)}
+            style={{
+              position: 'absolute',
+              top: 20,
+              right: 24,
+              background: 'none',
+              border: '2px solid rgba(255,255,255,0.6)',
+              color: '#fff',
+              fontSize: 22,
+              lineHeight: 1,
+              padding: '6px 12px',
+              cursor: 'pointer',
+              fontFamily: 'var(--font-display)',
+              letterSpacing: '.1em',
+            }}
+          >
+            ✕
+          </button>
+          <motion.img
+            src={lightboxUrl}
+            alt=""
+            initial={{ scale: 0.92 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0.92 }}
+            transition={{ duration: 0.15 }}
+            onClick={e => e.stopPropagation()}
+            style={{
+              maxWidth: '92vw',
+              maxHeight: '92vh',
+              objectFit: 'contain',
+              boxShadow: '0 0 60px rgba(0,0,0,0.8)',
+            }}
+          />
+        </motion.div>
+      )}
+    </AnimatePresence>
+    </>
   )
 }
 
@@ -850,6 +912,7 @@ function AdminDetail({
   prompts,
   promptsLoaded,
   onClose,
+  onLightbox,
 }: {
   char: CharacterWithImage
   image?: string
@@ -863,6 +926,7 @@ function AdminDetail({
   prompts: { positive: string; negative: string }
   promptsLoaded: boolean
   onClose: () => void
+  onLightbox: (url: string) => void
 }) {
   return (
     <div
@@ -896,7 +960,12 @@ function AdminDetail({
           >
             {image ? (
               <>
-                <img src={image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img
+                  src={image}
+                  alt=""
+                  onClick={() => onLightbox(image)}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'zoom-in' }}
+                />
                 {uploadSuccess && (
                   <div
                     style={{
