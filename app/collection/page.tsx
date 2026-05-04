@@ -46,7 +46,21 @@ export default function CollectionPage() {
 
   useEffect(() => {
     loadCharacters()
+    loadDefaultPrompts()
   }, [])
+
+  async function loadDefaultPrompts() {
+    try {
+      const res = await fetch('/art_prompts.json')
+      if (res.ok) {
+        const data = await res.json()
+        setArtPrompts(data)
+        setPromptsLoaded(true)
+      }
+    } catch {
+      // prompts will be loaded manually if fetch fails
+    }
+  }
 
   async function loadCharacters() {
     setLoading(true)
