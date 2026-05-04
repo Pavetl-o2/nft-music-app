@@ -20,6 +20,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Solo se permiten imágenes' }, { status: 400 })
     }
 
+    const MAX_SIZE = 20 * 1024 * 1024 // 20 MB
+    if (file.size > MAX_SIZE) {
+      return NextResponse.json({ error: 'Imagen demasiado grande (máximo 20 MB)' }, { status: 413 })
+    }
+
     const buffer = await file.arrayBuffer()
     const ext = file.name.split('.').pop() || 'png'
     const filePath = `${characterId}.${ext}`
