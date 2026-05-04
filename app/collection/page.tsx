@@ -933,6 +933,8 @@ function AdminDetail({
   promptsLoaded,
   onClose,
   onLightbox,
+  position,
+  onSavePosition,
 }: {
   char: CharacterWithImage
   image?: string
