@@ -1,6 +1,7 @@
 import type { FusionPayload } from './fusion'
 
 const BASE_URL = process.env.ACESTEP_BASE_URL || ''
+const AUDIO_CACHE_PATH = '/workspace/ACE-Step-1.5/.cache/acestep/tmp/api_audio'
 
 export interface GenerationResult {
   taskId: string
@@ -21,10 +22,7 @@ export async function releaseTask(payload: FusionPayload): Promise<string> {
   return data.data.task_id
 }
 
-export async function pollResult(taskId: string): Promise<{
-  status: number
-  audioUrls: string[]
-}> {
+async function queryResult(taskId: string): Promise<Buffer | null> {
   const res = await fetch(`${BASE_URL}/query_result`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -34,44 +32,67 @@ export async function pollResult(taskId: string): Promise<{
   if (!res.ok) throw new Error(`Poll error: ${res.status}`)
   const data = await res.json()
 
-  const audioUrls: string[] = []
-  if (data.data?.audio_files) {
-    for (const f of data.data.audio_files) {
-      if (f.url) audioUrls.push(`${BASE_URL}${f.url}`)
-    }
-  }
+  const items: any[] = Array.isArray(data.data) ? data.data : []
+  if (items.length === 0) return null
 
-  return {
-    status: data.data?.status ?? 0,
-    audioUrls,
+  const first = items[0]
+  const audioPath: string | undefined = first?.audio_url || first?.url || first?.path
+  if (!audioPath) return null
+
+  const audioUrl = audioPath.startsWith('http') ? audioPath : `${BASE_URL}${audioPath}`
+  const audioRes = await fetch(audioUrl)
+  if (!audioRes.ok) return null
+  return Buffer.from(await audioRes.arrayBuffer())
+}
+
+async function fetchAudioFallback(taskId: string): Promise<Buffer | null> {
+  const path = `${AUDIO_CACHE_PATH}/${taskId}.wav`
+  try {
+    const res = await fetch(`${BASE_URL}/v1/audio?path=${encodeURIComponent(path)}`)
+    if (!res.ok) return null
+    const buf = Buffer.from(await res.arrayBuffer())
+    // WAV header mínimo es 44 bytes; rechazar respuestas vacías o truncadas
+    return buf.length > 44 ? buf : null
+  } catch {
+    return null
   }
 }
 
 export async function waitForResult(
   taskId: string,
   onProgress?: (msg: string) => void,
-  maxWait = 300000
-): Promise<string[]> {
+  maxWait = 280000
+): Promise<Buffer> {
   const start = Date.now()
   const interval = 3000
+  let emptyCount = 0
 
   while (Date.now() - start < maxWait) {
     await new Promise(r => setTimeout(r, interval))
-
-    const { status, audioUrls } = await pollResult(taskId)
-
-    if (status === 1) {
-      onProgress?.('¡Canción lista!')
-      return audioUrls
-    }
-
-    if (status === 2) {
-      throw new Error('La generación falló en el servidor')
-    }
-
     const elapsed = Math.round((Date.now() - start) / 1000)
+
+    try {
+      const buf = await queryResult(taskId)
+      if (buf) {
+        onProgress?.('¡Canción lista!')
+        return buf
+      }
+      emptyCount++
+    } catch {
+      // error transitorio, seguir intentando
+    }
+
+    // Fallback: después de 3 respuestas vacías y al menos 15s, intentar /v1/audio
+    if (emptyCount >= 3 && elapsed >= 15) {
+      const fallback = await fetchAudioFallback(taskId)
+      if (fallback) {
+        onProgress?.('¡Canción lista!')
+        return fallback
+      }
+    }
+
     onProgress?.(`Generando... ${elapsed}s`)
   }
 
-  throw new Error('Timeout: la generación tardó demasiado')
+  throw new Error('Timeout: la generación tardó demasiado. Intenta de nuevo en unos minutos.')
 }

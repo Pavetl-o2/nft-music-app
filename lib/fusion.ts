@@ -91,7 +91,7 @@ export function fuseCharacters(
     batch_size: 1,
     inference_steps: inferenceSteps,
     vocal_language: vp.language || 'en',
-    thinking: false,
+    thinking: true,
     audio_format: 'wav',
   }
 }

@@ -4,7 +4,7 @@ import { fuseCharacters } from '@/lib/fusion'
 import { releaseTask, waitForResult } from '@/lib/acestep'
 import type { Character } from '@/lib/supabase'
 
-export const maxDuration = 300 // 5 minutes
+export const maxDuration = 300 // 5 minutes (Vercel limit)
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,21 +28,24 @@ export async function POST(req: NextRequest) {
     // 3. Submit to ACE-Step
     const taskId = await releaseTask(payload)
 
-    // 4. Poll for result
-    const audioUrls = await waitForResult(taskId)
+    // 4. Poll for result — timeout 20s antes del límite de Vercel
+    const audioBuffer = await waitForResult(taskId, undefined, 280000)
 
-    return NextResponse.json({
-      success: true,
-      taskId,
-      audioUrls,
-      lyrics,
-      payload,
+    return new NextResponse(audioBuffer, {
+      status: 200,
+      headers: {
+        'Content-Type': 'audio/wav',
+        'Content-Disposition': `inline; filename="${taskId}.wav"`,
+        'X-Task-Id': taskId,
+        'X-Lyrics': encodeURIComponent(lyrics),
+      },
     })
   } catch (error: any) {
     console.error('Generation error:', error)
+    const isTimeout = error.message?.includes('Timeout')
     return NextResponse.json(
       { error: error.message || 'Error en la generación' },
-      { status: 500 }
+      { status: isTimeout ? 504 : 500 }
     )
   }
 }
