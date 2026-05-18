@@ -12,6 +12,7 @@ interface CharacterCardProps {
   adminMode?: boolean
   hasImage?: boolean
   imagePosition?: { x: number; y: number }
+  onImageClick?: () => void
 }
 
 const TAPE_VARIANTS: Record<string, 'yellow' | 'green'> = {
@@ -20,7 +21,7 @@ const TAPE_VARIANTS: Record<string, 'yellow' | 'green'> = {
   vocals: 'green',
 }
 
-export function CharacterCard({ character, selected, onClick, compact, adminMode, hasImage, imagePosition }: CharacterCardProps) {
+export function CharacterCard({ character, selected, onClick, compact, adminMode, hasImage, imagePosition, onImageClick }: CharacterCardProps) {
   const trait = character.public_metadata.kit_type
     || character.public_metadata.instrument
     || character.public_metadata.vocal_style
@@ -61,12 +62,17 @@ export function CharacterCard({ character, selected, onClick, compact, adminMode
         <div style={{ position: 'relative' }}>
           {character.image_url ? (
             <div
+              role={onImageClick ? 'button' : undefined}
+              tabIndex={onImageClick ? 0 : undefined}
+              onClick={onImageClick ? (e) => { e.stopPropagation(); onImageClick() } : undefined}
+              onKeyDown={onImageClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onImageClick() } } : undefined}
               style={{
                 width: '100%',
                 height: 160,
                 border: '2px solid var(--ink)',
                 overflow: 'hidden',
                 position: 'relative',
+                cursor: onImageClick ? 'zoom-in' : undefined,
               }}
             >
               <img

@@ -12,8 +12,14 @@ CREATE TABLE IF NOT EXISTS nft_characters (
   public_metadata JSONB NOT NULL DEFAULT '{}',
   game_params JSONB NOT NULL DEFAULT '{}',
   rarity_score INTEGER NOT NULL DEFAULT 0,
+  image_position_x FLOAT DEFAULT 50,
+  image_position_y FLOAT DEFAULT 50,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Si la tabla ya existe, agregar las columnas con:
+-- ALTER TABLE nft_characters ADD COLUMN IF NOT EXISTS image_position_x FLOAT DEFAULT 50;
+-- ALTER TABLE nft_characters ADD COLUMN IF NOT EXISTS image_position_y FLOAT DEFAULT 50;
 
 -- Index por rol para queries rápidas
 CREATE INDEX IF NOT EXISTS idx_nft_characters_role ON nft_characters(role);

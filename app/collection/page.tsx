@@ -9,7 +9,11 @@ import { supabase, type Character } from '@/lib/supabase'
 import { getRoleLabel } from '@/lib/fusion'
 import { formatGenre } from '@/lib/utils'
 
-type CharacterWithImage = Character & { image_url?: string | null }
+type CharacterWithImage = Character & {
+  image_url?: string | null
+  image_position_x?: number | null
+  image_position_y?: number | null
+}
 
 type ArtPrompt = {
   id: string
@@ -43,7 +47,7 @@ export default function CollectionPage() {
   const [progressSynced, setProgressSynced] = useState(false)
   const [imagePositions, setImagePositions] = useState<Record<string, { x: number; y: number }>>({})
 
-  // Load/save image positions from localStorage
+  // Cargar posiciones guardadas en localStorage (como caché rápida inicial)
   useEffect(() => {
     try {
       const saved = localStorage.getItem('nft_image_positions')
@@ -51,12 +55,21 @@ export default function CollectionPage() {
     } catch {}
   }, [])
 
-  function savePosition(charId: string, pos: { x: number; y: number }) {
+  async function savePosition(charId: string, pos: { x: number; y: number }) {
+    // Actualización optimista: estado + localStorage
     setImagePositions(prev => {
       const next = { ...prev, [charId]: pos }
       try { localStorage.setItem('nft_image_positions', JSON.stringify(next)) } catch {}
       return next
     })
+    // Persistir en Supabase via service role
+    try {
+      await fetch('/api/save-position', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ characterId: charId, x: pos.x, y: pos.y }),
+      })
+    } catch { /* no bloquear la UI si falla el guardado remoto */ }
   }
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -84,11 +97,21 @@ export default function CollectionPage() {
     setLoading(true)
     const { data, error } = await supabase
       .from('nft_characters')
-      .select('id, name, role, genre, public_metadata, rarity_score, image_url')
+      .select('id, name, role, genre, public_metadata, rarity_score, image_url, image_position_x, image_position_y')
       .order('rarity_score', { ascending: false })
 
     if (!error && data) {
       setCharacters(data as CharacterWithImage[])
+      // Posiciones de la DB tienen prioridad sobre localStorage
+      const dbPositions: Record<string, { x: number; y: number }> = {}
+      for (const c of data as CharacterWithImage[]) {
+        if (c.image_position_x != null) {
+          dbPositions[c.id] = { x: c.image_position_x, y: c.image_position_y ?? 50 }
+        }
+      }
+      if (Object.keys(dbPositions).length > 0) {
+        setImagePositions(prev => ({ ...prev, ...dbPositions }))
+      }
     }
     setLoading(false)
   }
@@ -623,6 +646,7 @@ export default function CollectionPage() {
                       adminMode={adminMode}
                       onClick={() => handleSelect(char)}
                       imagePosition={imagePositions[char.id]}
+                      onImageClick={!adminMode && char.image_url ? () => setLightboxUrl(char.image_url!) : undefined}
                     />
                   </motion.div>
                 ))}
