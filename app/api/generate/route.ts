@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     // 4. Poll for result — timeout 20s antes del límite de Vercel
     const audioBuffer = await waitForResult(taskId, undefined, 280000)
 
-    return new NextResponse(audioBuffer, {
+    return new NextResponse(new Uint8Array(audioBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'audio/wav',
