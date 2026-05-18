@@ -97,23 +97,32 @@ export default function CollectionPage() {
     setLoading(true)
     const { data, error } = await supabase
       .from('nft_characters')
-      .select('id, name, role, genre, public_metadata, rarity_score, image_url, image_position_x, image_position_y')
+      .select('id, name, role, genre, public_metadata, rarity_score, image_url')
       .order('rarity_score', { ascending: false })
 
     if (!error && data) {
       setCharacters(data as CharacterWithImage[])
-      // Posiciones de la DB tienen prioridad sobre localStorage
-      const dbPositions: Record<string, { x: number; y: number }> = {}
-      for (const c of data as CharacterWithImage[]) {
-        if (c.image_position_x != null) {
-          dbPositions[c.id] = { x: c.image_position_x, y: c.image_position_y ?? 50 }
-        }
-      }
-      if (Object.keys(dbPositions).length > 0) {
-        setImagePositions(prev => ({ ...prev, ...dbPositions }))
-      }
     }
     setLoading(false)
+
+    // Carga separada de posiciones — falla silenciosamente si las columnas
+    // image_position_x/y aún no existen en Supabase (antes del ALTER TABLE)
+    try {
+      const { data: posData, error: posError } = await supabase
+        .from('nft_characters')
+        .select('id, image_position_x, image_position_y')
+      if (!posError && posData) {
+        const dbPositions: Record<string, { x: number; y: number }> = {}
+        for (const row of posData as Array<{ id: string; image_position_x: number | null; image_position_y: number | null }>) {
+          if (row.image_position_x != null) {
+            dbPositions[row.id] = { x: row.image_position_x, y: row.image_position_y ?? 50 }
+          }
+        }
+        if (Object.keys(dbPositions).length > 0) {
+          setImagePositions(prev => ({ ...prev, ...dbPositions }))
+        }
+      }
+    } catch { /* columnas no existen aún, usar solo localStorage */ }
   }
 
   function handleLoadPrompts(e: React.ChangeEvent<HTMLInputElement>) {
