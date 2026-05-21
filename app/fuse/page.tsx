@@ -34,6 +34,15 @@ export default function FusePage() {
   const [error, setError] = useState<string>('')
   const [msgIndex, setMsgIndex] = useState(0)
 
+  // Limpiar blob URLs al desmontar o al generar nueva versión
+  const revokeAudioUrls = (urls: string[]) => {
+    urls.forEach(u => { if (u.startsWith('blob:')) URL.revokeObjectURL(u) })
+  }
+
+  useEffect(() => {
+    return () => { revokeAudioUrls(audioUrls) }
+  }, [audioUrls])
+
   useEffect(() => {
     const r = sessionStorage.getItem('selected_rhythm')
     const m = sessionStorage.getItem('selected_melody')
@@ -89,14 +98,27 @@ export default function FusePage() {
         body: JSON.stringify({ rhythm, melody, vocals }),
       })
 
-      const data = await res.json()
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Error desconocido')
+      if (!res.ok) {
+        let errMsg = 'Error desconocido'
+        try { errMsg = (await res.json()).error || errMsg } catch {}
+        throw new Error(errMsg)
       }
 
-      setAudioUrls(data.audioUrls || [])
-      setLyrics(data.lyrics || '')
+      const contentType = res.headers.get('content-type') || ''
+      if (contentType.includes('audio/')) {
+        // Respuesta binaria WAV — crear blob URL para el reproductor
+        const blob = await res.blob()
+        const blobUrl = URL.createObjectURL(blob)
+        const rawLyrics = res.headers.get('X-Lyrics') || ''
+        setAudioUrls([blobUrl])
+        setLyrics(rawLyrics ? decodeURIComponent(rawLyrics) : '')
+      } else {
+        // Fallback JSON (legacy)
+        const data = await res.json()
+        if (!data.success) throw new Error(data.error || 'Error desconocido')
+        setAudioUrls(data.audioUrls || [])
+        setLyrics(data.lyrics || '')
+      }
       setState('done')
 
     } catch (err: any) {
@@ -321,6 +343,7 @@ export default function FusePage() {
               <div className="flex gap-4 pt-4">
                 <button
                   onClick={() => {
+                    revokeAudioUrls(audioUrls)
                     setState('idle')
                     setAudioUrls([])
                     setLyrics('')
