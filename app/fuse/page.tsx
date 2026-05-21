@@ -195,9 +195,9 @@ export default function FusePage() {
             className="mb-8 grid grid-cols-3 gap-4"
           >
             {[
-              { label: 'Tempo estimado', value: `${Math.round((Number((rhythm.game_params as any).tempo_min) + Number((rhythm.game_params as any).tempo_max)) / 2)} BPM` },
-              { label: 'Tonalidad', value: `${(melody.game_params as any).key_preference} ${(melody.game_params as any).mode}` },
-              { label: 'Idioma', value: (vocals.game_params as any).language?.toUpperCase() || 'EN' },
+              { label: 'Tempo estimado', value: `${Math.round(((Number((rhythm.game_params as any)?.tempo_min) || 0) + (Number((rhythm.game_params as any)?.tempo_max) || 0)) / 2) || '—'} BPM` },
+              { label: 'Tonalidad', value: `${(melody.game_params as any)?.key_preference || '—'} ${(melody.game_params as any)?.mode || ''}`.trim() },
+              { label: 'Idioma', value: (vocals.game_params as any)?.language?.toUpperCase() || 'EN' },
             ].map(item => (
               <div key={item.label} className="border border-steel p-4 text-center">
                 <div className="label mb-1">{item.label}</div>
