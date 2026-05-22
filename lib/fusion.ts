@@ -82,7 +82,7 @@ export function fuseCharacters(
   ].filter(Boolean).join(', ')
 
   const sungLines = lyrics.split('\n').filter(l => l.trim() && !l.trim().startsWith('[')).length
-  const audioDuration = Math.min(240, Math.max(60, sungLines * 15 + 20))
+  const audioDuration = Math.min(120, Math.max(60, sungLines * 8 + 20))
 
   return {
     prompt,
