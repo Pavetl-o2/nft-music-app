@@ -204,6 +204,7 @@ body::after {
   }
   .card::before {
     content: '';
+    pointer-events: none;
     @apply absolute inset-0 opacity-0 bg-gradient-to-br from-blood/5 to-transparent transition-opacity duration-300;
   }
   .card:hover::before { @apply opacity-100; }
