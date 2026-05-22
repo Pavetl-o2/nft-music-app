@@ -26,7 +26,8 @@ async function queryResult(taskId: string): Promise<Buffer | null> {
   const res = await fetch(`${BASE_URL}/query_result`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ task_id: taskId }),
+    // El API espera "task_id_list" (lista), no "task_id"
+    body: JSON.stringify({ task_id_list: [taskId] }),
   })
 
   if (!res.ok) throw new Error(`Poll error: ${res.status}`)
@@ -36,11 +37,20 @@ async function queryResult(taskId: string): Promise<Buffer | null> {
   if (items.length === 0) return null
 
   const first = items[0]
-  const audioPath: string | undefined = first?.audio_url || first?.url || first?.path
+  // status 1 = succeeded, 0 = processing, 2 = failed
+  if (first.status !== 1) return null
+
+  // "result" es un string JSON que contiene el array de resultados
+  let resultItems: any[] = []
+  try { resultItems = JSON.parse(first.result) } catch { return null }
+  if (!Array.isArray(resultItems) || resultItems.length === 0) return null
+
+  // el path del archivo está en el campo "file"
+  const audioPath: string = resultItems[0]?.file
   if (!audioPath) return null
 
-  const audioUrl = audioPath.startsWith('http') ? audioPath : `${BASE_URL}${audioPath}`
-  const audioRes = await fetch(audioUrl)
+  // NO usar encodeURIComponent — el servidor espera slashes reales
+  const audioRes = await fetch(`${BASE_URL}/v1/audio?path=${audioPath}`)
   if (!audioRes.ok) return null
   return Buffer.from(await audioRes.arrayBuffer())
 }
