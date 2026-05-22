@@ -48,7 +48,7 @@ async function queryResult(taskId: string): Promise<Buffer | null> {
 async function fetchAudioFallback(taskId: string): Promise<Buffer | null> {
   const path = `${AUDIO_CACHE_PATH}/${taskId}.wav`
   try {
-    const res = await fetch(`${BASE_URL}/v1/audio?path=${encodeURIComponent(path)}`)
+    const res = await fetch(`${BASE_URL}/v1/audio?path=${path}`)
     if (!res.ok) return null
     const buf = Buffer.from(await res.arrayBuffer())
     // WAV header mínimo es 44 bytes; rechazar respuestas vacías o truncadas

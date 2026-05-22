@@ -100,7 +100,10 @@ export default function FusePage() {
 
       if (!res.ok) {
         let errMsg = 'Error desconocido'
-        try { errMsg = (await res.json()).error || errMsg } catch {}
+        try {
+          const errData = await res.json()
+          errMsg = (typeof errData.error === 'string' ? errData.error : JSON.stringify(errData.error)) || errMsg
+        } catch {}
         throw new Error(errMsg)
       }
 
@@ -122,7 +125,7 @@ export default function FusePage() {
       setState('done')
 
     } catch (err: any) {
-      setError(err.message || 'Algo salió mal')
+      setError(typeof err?.message === 'string' ? err.message : typeof err === 'string' ? err : 'Algo salió mal')
       setState('error')
     }
   }
