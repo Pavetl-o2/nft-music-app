@@ -49,23 +49,15 @@ async function queryResult(taskId: string): Promise<Buffer | null> {
   const audioPath: string = resultItems[0]?.file
   if (!audioPath) return null
 
-  // NO usar encodeURIComponent — el servidor espera slashes reales
-  const audioRes = await fetch(`${BASE_URL}/v1/audio?path=${audioPath}`)
+  // el campo "file" puede ser ya una URL del endpoint (/v1/audio?path=...)
+  // o un filesystem path (/workspace/...) — manejar ambos casos
+  const audioFetchUrl = audioPath.startsWith('/v1/') || audioPath.startsWith('/api/')
+    ? `${BASE_URL}${audioPath}`
+    : `${BASE_URL}/v1/audio?path=${audioPath}`
+
+  const audioRes = await fetch(audioFetchUrl)
   if (!audioRes.ok) return null
   return Buffer.from(await audioRes.arrayBuffer())
-}
-
-async function fetchAudioFallback(taskId: string): Promise<Buffer | null> {
-  const path = `${AUDIO_CACHE_PATH}/${taskId}.wav`
-  try {
-    const res = await fetch(`${BASE_URL}/v1/audio?path=${path}`)
-    if (!res.ok) return null
-    const buf = Buffer.from(await res.arrayBuffer())
-    // WAV header mínimo es 44 bytes; rechazar respuestas vacías o truncadas
-    return buf.length > 44 ? buf : null
-  } catch {
-    return null
-  }
 }
 
 export async function waitForResult(
@@ -75,7 +67,6 @@ export async function waitForResult(
 ): Promise<Buffer> {
   const start = Date.now()
   const interval = 3000
-  let emptyCount = 0
 
   while (Date.now() - start < maxWait) {
     await new Promise(r => setTimeout(r, interval))
@@ -87,18 +78,8 @@ export async function waitForResult(
         onProgress?.('¡Canción lista!')
         return buf
       }
-      emptyCount++
     } catch {
       // error transitorio, seguir intentando
-    }
-
-    // Fallback: después de 3 respuestas vacías y al menos 15s, intentar /v1/audio
-    if (emptyCount >= 3 && elapsed >= 15) {
-      const fallback = await fetchAudioFallback(taskId)
-      if (fallback) {
-        onProgress?.('¡Canción lista!')
-        return fallback
-      }
     }
 
     onProgress?.(`Generando... ${elapsed}s`)
