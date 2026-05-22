@@ -81,13 +81,16 @@ export function fuseCharacters(
     weirdness > 0.6 ? 'experimental, unconventional' : null,
   ].filter(Boolean).join(', ')
 
+  const sungLines = lyrics.split('\n').filter(l => l.trim() && !l.trim().startsWith('[')).length
+  const audioDuration = Math.min(240, Math.max(60, sungLines * 15 + 20))
+
   return {
     prompt,
     lyrics,
     bpm,
     key_scale: keyScale,
     time_signature: timeSig,
-    audio_duration: 60,
+    audio_duration: audioDuration,
     batch_size: 1,
     inference_steps: inferenceSteps,
     vocal_language: vp.language || 'en',
