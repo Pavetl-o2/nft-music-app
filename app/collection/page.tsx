@@ -241,7 +241,8 @@ export default function CollectionPage() {
 
       if (data.success) {
         setUploadSuccess(true)
-        const updatedChar = { ...detailChar, image_url: data.imageUrl }
+        const freshUrl = `${data.imageUrl}?t=${Date.now()}`
+        const updatedChar = { ...detailChar, image_url: freshUrl }
         setCharacters(prev => prev.map(c => c.id === detailChar.id ? updatedChar : c))
         setDetailChar(updatedChar)
         setTimeout(() => setUploadSuccess(false), 3000)
