@@ -21,7 +21,7 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'SOUNDFORGE — NFT Music Game',
+  title: 'BOOTLEG — NFT Music Game',
   description: 'Combina tus NFTs para crear música con IA',
 }
 

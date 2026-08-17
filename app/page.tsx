@@ -21,7 +21,7 @@ export default function HomePage() {
     <main className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="border-b border-steel px-8 py-4 flex items-center justify-between">
-        <span className="font-display text-2xl tracking-widest text-blood">SOUNDFORGE</span>
+        <span className="font-display text-2xl tracking-widest text-blood">BOOTLEG</span>
         <span className="font-mono text-xs text-smoke tracking-widest">PROTOTYPE v0.1</span>
       </header>
 

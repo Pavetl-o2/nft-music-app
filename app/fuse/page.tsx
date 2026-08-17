@@ -143,7 +143,7 @@ export default function FusePage() {
       {/* Header */}
       <header className="border-b border-steel px-8 py-4 flex items-center justify-between sticky top-0 bg-void/95 backdrop-blur z-20">
         <button onClick={() => router.push('/collection')} className="font-display text-2xl tracking-widest text-blood hover:text-crimson transition-colors">
-          SOUNDFORGE
+          BOOTLEG
         </button>
         <button
           onClick={() => router.push('/collection')}

@@ -1,4 +1,4 @@
-# SOUNDFORGE — NFT Music Game
+# BOOTLEG — NFT Music Game
 
 Prototipo de aplicación web para el juego NFT de música generativa.
 
