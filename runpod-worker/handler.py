@@ -14,6 +14,7 @@ Flow per job:
 import base64
 import json
 import os
+import shutil
 import subprocess
 import sys
 import threading
@@ -34,6 +35,10 @@ POLL_INTERVAL = float(os.environ.get("WORKER_POLL_INTERVAL", "3"))
 
 SERVER_CMD = os.environ.get("ACESTEP_SERVER_CMD", "acestep-api").split()
 
+CHECKPOINTS_DIR = os.environ.get("ACESTEP_CHECKPOINTS_DIR", "")
+# Where ACE-Step falls back to when it resolves <project_root>/checkpoints.
+DEFAULT_CHECKPOINTS_DIR = "/opt/acestep/checkpoints"
+
 _server_proc = None
 _boot_lock = threading.Lock()
 _booted = False
@@ -41,6 +46,53 @@ _booted = False
 
 def _log(msg):
     print(f"[worker] {msg}", flush=True)
+
+
+def _prepare_checkpoints():
+    """Force model weights onto the network volume.
+
+    ACE-Step resolves its checkpoint directory in more than one place and does
+    not consistently honour ACESTEP_CHECKPOINTS_DIR -- observed in production,
+    the DiT and the LM disagreed and the LM landed on the container's disk.
+    Symlinking the fallback path at the volume closes that gap, whichever
+    resolution the library happens to use.
+
+    Without this, every cold start re-downloads ~20GB and the volume sits idle.
+    """
+    if not CHECKPOINTS_DIR:
+        _log("ACESTEP_CHECKPOINTS_DIR is unset; leaving the default path alone")
+        return
+
+    volume_root = os.path.dirname(CHECKPOINTS_DIR.rstrip("/"))
+    if not os.path.isdir(volume_root):
+        _log(
+            f"WARNING: {volume_root} is not mounted. Weights will download to the "
+            f"container disk and will NOT survive a cold start."
+        )
+        return
+
+    os.makedirs(CHECKPOINTS_DIR, exist_ok=True)
+
+    if os.path.islink(DEFAULT_CHECKPOINTS_DIR):
+        _log(f"checkpoints already linked -> {os.readlink(DEFAULT_CHECKPOINTS_DIR)}")
+        return
+
+    # A real directory here means a previous run downloaded onto container disk.
+    # Move what is there onto the volume rather than discarding it.
+    if os.path.isdir(DEFAULT_CHECKPOINTS_DIR):
+        for entry in os.listdir(DEFAULT_CHECKPOINTS_DIR):
+            src = os.path.join(DEFAULT_CHECKPOINTS_DIR, entry)
+            dst = os.path.join(CHECKPOINTS_DIR, entry)
+            if not os.path.exists(dst):
+                _log(f"moving {entry} onto the volume")
+                shutil.move(src, dst)
+        shutil.rmtree(DEFAULT_CHECKPOINTS_DIR, ignore_errors=True)
+
+    os.symlink(CHECKPOINTS_DIR, DEFAULT_CHECKPOINTS_DIR)
+    _log(f"checkpoints linked: {DEFAULT_CHECKPOINTS_DIR} -> {CHECKPOINTS_DIR}")
+
+    cached = sorted(os.listdir(CHECKPOINTS_DIR))
+    _log(f"models already on the volume: {cached or 'none (first run will download)'}")
 
 
 def _spawn_server():
@@ -102,6 +154,7 @@ def _ensure_server():
     with _boot_lock:
         if _booted:
             return
+        _prepare_checkpoints()
         _spawn_server()
         _wait_until_healthy()
         _booted = True

@@ -160,7 +160,31 @@ que esto multiplica el costo por generación sin beneficio.
 Opciones: bajar `inference_steps` a ~8, o cambiar a `acestep-v15-base` con
 `guidance_scale` y `shift` (base sí aprovecha 32–64 pasos, pero es más lento).
 
-### 3.8 Parámetros útiles que no estamos usando
+### 3.8 Los pesos se bajaban al disco del contenedor, no al volumen
+
+**Causa:** `ACESTEP_CHECKPOINTS_DIR=/runpod-volume/checkpoints` estaba puesta y
+aun así los logs mostraban:
+
+```
+[Model Download] Downloading acestep-5Hz-lm-0.6B ... to /opt/acestep/checkpoints/...
+```
+
+`ACESTEP_CHECKPOINTS_DIR` **sí** es la variable correcta (confirmado en
+`acestep/model_downloader.py`, función `get_checkpoints_dir()`), pero ACE-Step
+resuelve ese directorio en más de un punto y el DiT y el LM no coincidieron.
+El fallback es `<project_root>/checkpoints`, o sea `/opt/acestep/checkpoints`.
+
+Consecuencia: el volumen quedaba vacío y **cada cold start volvía a bajar ~20 GB**.
+
+**Fix:** `_prepare_checkpoints()` en `runpod-worker/handler.py` crea un symlink
+de `/opt/acestep/checkpoints` hacia el volumen antes de arrancar el servidor.
+Da igual qué ruta resuelva la librería: las dos terminan en el volumen. Si ya
+había pesos en el disco del contenedor, los mueve antes de enlazar.
+
+También avisa en el log si `/runpod-volume` no está montado, en vez de fallar
+en silencio.
+
+### 3.9 Parámetros útiles que no estamos usando
 
 De la documentación oficial:
 
