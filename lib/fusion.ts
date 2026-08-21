@@ -6,13 +6,22 @@ export interface FusionPayload {
   bpm: number
   key_scale: string
   time_signature: string
-  audio_duration: number
+  // Omitido a propósito: cuando falta, el LM de ACE-Step lo calcula desde la
+  // letra y planea el arreglo para que la canción CONCLUYA. Si lo mandamos,
+  // genera exactamente N segundos y corta donde caiga.
+  audio_duration?: number
   batch_size: number
   inference_steps: number
   vocal_language: string
   thinking: boolean
   audio_format: string
 }
+
+// Efectos de pedal de guitarra. En los datos hay personajes de piano con estos
+// FX asignados, y esas señales dominan la lectura del modelo: un personaje de
+// piano acabó generando guitarra distorsionada. Se filtran cuando el
+// instrumento principal no es una guitarra.
+const GUITAR_FX = ['distortion', 'wah', 'fuzz', 'overdrive', 'crunch', 'feedback', 'palm mute']
 
 export function fuseCharacters(
   rhythm: Character,
@@ -42,11 +51,19 @@ export function fuseCharacters(
     ...(rp.fx_keywords || []),
   ].filter(Boolean)
 
+  const leadInstrument: string = mp.lead_instrument || ''
+  const isGuitarLead = /guitar/i.test(leadInstrument)
+
+  const toneFx: string[] = (mp.tone_fx || []).filter((fx: string) =>
+    isGuitarLead || !GUITAR_FX.some(g => fx.toLowerCase().includes(g))
+  )
+
+  // El instrumento principal NO va aquí: se coloca al frente del prompt para
+  // que no quede sepultado entre los demás tags.
   const melodyKeywords = [
-    mp.lead_instrument,
     mp.mode,
     ...(mp.mood_keywords || []),
-    ...(mp.tone_fx || []),
+    ...toneFx,
   ].filter(Boolean)
 
   const vocalsKeywords = [
@@ -74,8 +91,12 @@ export function fuseCharacters(
     0.1
   )
 
+  // El instrumento principal abre el prompt y se refuerza justo después. Antes
+  // iba como un tag más a mitad de la lista y el modelo lo ignoraba: un
+  // personaje de piano generaba guitarra distorsionada.
   const prompt = [
-    genreLabel,
+    leadInstrument ? `${leadInstrument}-led ${genreLabel}` : genreLabel,
+    leadInstrument ? `prominent ${leadInstrument} melody` : null,
     ...rhythmKeywords,
     ...melodyKeywords,
     ...vocalsKeywords,
@@ -83,23 +104,20 @@ export function fuseCharacters(
     weirdness > 0.6 ? 'experimental, unconventional' : null,
   ].filter(Boolean).join(', ')
 
-  const sungLines = lyrics.split('\n').filter(l => l.trim() && !l.trim().startsWith('[')).length
-  const audioDuration = Math.min(120, Math.max(60, sungLines * 8 + 20))
-
   return {
     prompt,
     lyrics,
     bpm,
     key_scale: keyScale,
     time_signature: timeSig,
-    audio_duration: audioDuration,
+    // audio_duration se omite adrede — ver el comentario en FusionPayload.
     batch_size: 1,
     inference_steps: inferenceSteps,
     vocal_language: vp.language || 'en',
     thinking: true,
     // mp3, no wav: en serverless el audio vuelve en base64 dentro del JSON.
-    // 120s en wav son ~23MB (~31MB en base64), por encima del límite de
-    // payload de RunPod. En mp3 el mismo audio son ~3MB.
+    // Un wav de un par de minutos son ~23MB (~31MB en base64), por encima del
+    // límite de payload de RunPod. En mp3 el mismo audio son ~3MB.
     audio_format: 'mp3',
   }
 }

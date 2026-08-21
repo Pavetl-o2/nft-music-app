@@ -62,6 +62,11 @@ export async function POST(req: NextRequest) {
         'Content-Disposition': `inline; filename="${taskId}.${format}"`,
         'X-Task-Id': taskId,
         'X-Lyrics': encodeURIComponent(lyrics),
+        // El prompt viaja de vuelta para poder auditarlo desde la UI: sin esto
+        // no hay forma de saber con qué se generó una canción.
+        'X-Prompt': encodeURIComponent(payload.prompt),
+        'X-Bpm': String(payload.bpm),
+        'X-Key-Scale': encodeURIComponent(payload.key_scale),
       },
     })
   } catch (error: any) {

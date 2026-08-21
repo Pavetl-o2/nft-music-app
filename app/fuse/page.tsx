@@ -31,6 +31,8 @@ export default function FusePage() {
   const [progressMsg, setProgressMsg] = useState('')
   const [audioUrls, setAudioUrls] = useState<string[]>([])
   const [lyrics, setLyrics] = useState<string>('')
+  // Con qué se generó la canción, para poder auditarla desde la UI.
+  const [recipe, setRecipe] = useState<{ prompt: string; bpm: string; keyScale: string } | null>(null)
   const [error, setError] = useState<string>('')
   const [msgIndex, setMsgIndex] = useState(0)
 
@@ -109,12 +111,19 @@ export default function FusePage() {
 
       const contentType = res.headers.get('content-type') || ''
       if (contentType.includes('audio/')) {
-        // Respuesta binaria WAV — crear blob URL para el reproductor
+        // Respuesta binaria — crear blob URL para el reproductor
         const blob = await res.blob()
         const blobUrl = URL.createObjectURL(blob)
         const rawLyrics = res.headers.get('X-Lyrics') || ''
+        const rawPrompt = res.headers.get('X-Prompt') || ''
+        const rawKey = res.headers.get('X-Key-Scale') || ''
         setAudioUrls([blobUrl])
         setLyrics(rawLyrics ? decodeURIComponent(rawLyrics) : '')
+        setRecipe({
+          prompt: rawPrompt ? decodeURIComponent(rawPrompt) : '',
+          bpm: res.headers.get('X-Bpm') || '',
+          keyScale: rawKey ? decodeURIComponent(rawKey) : '',
+        })
       } else {
         // Fallback JSON (legacy)
         const data = await res.json()
@@ -342,6 +351,29 @@ export default function FusePage() {
                 </div>
               )}
 
+              {/* Receta: con qué se generó exactamente esta canción */}
+              {recipe?.prompt && (
+                <div className="card border-ash/30 p-6">
+                  <div className="label mb-4">Receta de generación</div>
+                  <div className="font-mono text-xs text-silver leading-relaxed space-y-3">
+                    <div>
+                      <span className="text-smoke">PROMPT</span>
+                      <div className="mt-1 whitespace-pre-wrap break-words">{recipe.prompt}</div>
+                    </div>
+                    <div className="flex gap-6">
+                      <div>
+                        <span className="text-smoke">BPM</span>
+                        <div className="mt-1">{recipe.bpm || '—'}</div>
+                      </div>
+                      <div>
+                        <span className="text-smoke">TONALIDAD</span>
+                        <div className="mt-1">{recipe.keyScale || '—'}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Actions */}
               <div className="flex gap-4 pt-4">
                 <button
@@ -350,6 +382,7 @@ export default function FusePage() {
                     setState('idle')
                     setAudioUrls([])
                     setLyrics('')
+                    setRecipe(null)
                   }}
                   className="btn-primary flex-1"
                 >
