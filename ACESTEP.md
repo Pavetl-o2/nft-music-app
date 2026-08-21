@@ -144,14 +144,15 @@ los clicks. **Fix:** `pointer-events: none` en el pseudo-elemento.
 
 Según la documentación oficial, el rango depende del modelo:
 
-| Modelo | Rango válido | Recomendado |
-|---|---|---|
-| `acestep-v15-turbo` (por defecto) | 1–20 | **8** |
-| `acestep-v15-base` | 1–200 | 32–64 |
+| Modelo | DiT | VRAM | Rango válido | Recomendado |
+|---|---|---|---|---|
+| `acestep-v15-xl-turbo` (el que usamos) | 4B | ~9 GB | 1–20 | **8** |
+| `acestep-v15-turbo` | 2B | ~4.7 GB | 1–20 | **8** |
+| `acestep-v15-xl-sft` | 4B | ~9 GB | 1–200 | 50 |
+| `acestep-v15-base` | 2B | ~4.7 GB | 1–200 | 32–64 |
 
-El modelo por defecto del servidor es **turbo** (`ACESTEP_CONFIG_PATH=acestep-v15-turbo`),
-así que 25–30 pasos está por encima del máximo. Los modelos turbo están destilados
-para pocos pasos: más pasos no mejoran la calidad, solo queman GPU.
+Los modelos turbo están destilados para pocos pasos: mandar 25–30 está por
+encima del máximo, no mejora la calidad y solo quema GPU.
 
 En un pod da igual (se paga por hora). En **serverless se paga por segundo**, así
 que esto multiplica el costo por generación sin beneficio.

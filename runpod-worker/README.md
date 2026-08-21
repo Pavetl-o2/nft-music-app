@@ -22,10 +22,39 @@ RunPod  ->  handler.py  ->  localhost:8001  ->  audio en base64
 | `Dockerfile` | Imagen CUDA 12.4 + Python 3.11 + ACE-Step 1.5 |
 | `../.github/workflows/build-worker.yml` | Construye y publica la imagen en `ghcr.io` |
 
+## Modelos disponibles
+
+El worker usa **`acestep-v15-xl-turbo`** por defecto. Se cambia desde las
+variables de entorno del endpoint, sin reconstruir la imagen.
+
+### DiT de 2B
+
+| Modelo | VRAM | Pasos | Calidad |
+|---|---|---|---|
+| `acestep-v15-base` | ~4.7 GB | 50 | Media |
+| `acestep-v15-sft` | ~4.7 GB | 50 | Alta |
+| `acestep-v15-turbo` | ~4.7 GB | **8** | Very High |
+
+### DiT de 4B (XL)
+
+| Modelo | VRAM | Pasos | Calidad |
+|---|---|---|---|
+| `acestep-v15-xl-base` | ~9 GB | 50 | Alta |
+| `acestep-v15-xl-sft` | ~9 GB | 50 | Very High |
+| `acestep-v15-xl-turbo` | ~9 GB | **8** | Very High + mejor audio |
+
+Los XL usan un decodificador DiT de 4B para mayor calidad de audio. Como
+`xl-turbo` también corre en 8 pasos, la diferencia de costo por canción frente
+al 2B es de centavos.
+
+### LM (para `thinking: true`)
+
+`acestep-5Hz-lm-0.6B` · `acestep-5Hz-lm-1.7B` · `acestep-5Hz-lm-4B`
+
 ## Los pesos NO están en la imagen
 
-Los modelos pesan ~15 GB. En vez de meterlos en la imagen, se descargan **una
-sola vez** en el volumen de red montado en `/runpod-volume`, y de ahí en
+En vez de meterlos en la imagen, se descargan **una sola vez** en el volumen de
+red montado en `/runpod-volume` (vía `ACESTEP_CHECKPOINTS_DIR`), y de ahí en
 adelante quedan cacheados.
 
 Ventajas: la imagen es chica y se construye gratis en GitHub Actions, y
@@ -80,19 +109,22 @@ Se configuran en el endpoint de RunPod. Todas tienen default en el Dockerfile.
 
 | Variable | Default | Para qué |
 |---|---|---|
-| `ACESTEP_CONFIG_PATH` | `acestep-v15-turbo` | Modelo DiT. Turbo = 8 pasos |
+| `ACESTEP_CONFIG_PATH` | `acestep-v15-xl-turbo` | Modelo DiT. Turbo = 8 pasos |
 | `ACESTEP_LM_MODEL_PATH` | `acestep-5Hz-lm-0.6B` | LM que usa `thinking: true` |
 | `ACESTEP_LM_BACKEND` | `pt` | `vllm` es más rápido pero arranca mucho más lento |
+| `ACESTEP_INIT_SERVICE` | `true` | Carga los modelos al arrancar, no en la 1ª petición |
+| `ACESTEP_CHECKPOINTS_DIR` | `/runpod-volume/checkpoints` | Dónde se cachean los pesos |
 | `ACESTEP_OFFLOAD_TO_CPU` | — | Ponlo en `true` si te topas con OOM de VRAM |
-| `HF_HOME` | `/runpod-volume/huggingface` | Dónde se cachean los pesos |
 | `WORKER_BOOT_TIMEOUT` | `1800` | Margen para la descarga inicial |
 | `WORKER_JOB_TIMEOUT` | `900` | Corte por job |
 
 ## GPU recomendada
 
-Con turbo 2B + LM 0.6B bastan **6–8 GB** de VRAM. Aun así conviene **24 GB**:
-audios de hasta 120 s consumen bastante más, y con menos margen ya hubo un OOM
+`xl-turbo` pide ~9 GB solo para los pesos, más lo que consuma la generación.
+Con audios de hasta 120 s conviene **24 GB** — con menos margen ya hubo un OOM
 antes (ver `ACESTEP.md` §3.4).
+
+Si te topas con OOM: `ACESTEP_OFFLOAD_TO_CPU=true`, o baja a `acestep-v15-turbo`.
 
 ## `inference_steps`
 
