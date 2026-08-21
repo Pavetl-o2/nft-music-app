@@ -141,7 +141,7 @@ export function AudioPlayer({ src, title, subtitle }: AudioPlayerProps) {
 
         <a
           href={src}
-          download={`${title}.wav`}
+          download={`${title}.mp3`}
           className="text-smoke hover:text-bone transition-colors"
           title="Descargar"
         >
