@@ -62,9 +62,11 @@ export function fuseCharacters(
     ? `${uniqueGenres[0]}`
     : `${uniqueGenres.join('-')} fusion`
 
-  // Sinergia: mismo género x3 = más inference steps
+  // El modelo turbo está destilado para 8 pasos (rango válido 1-20). Más pasos
+  // no mejoran la calidad, solo queman GPU — y en serverless se paga por
+  // segundo. La sinergia de género da un paso extra, nada más.
   const sameGenre = uniqueGenres.length === 1
-  const inferenceSteps = sameGenre ? 30 : 25
+  const inferenceSteps = sameGenre ? 9 : 8
 
   // Weirdness: max de los 3
   const weirdness = Math.max(
@@ -95,7 +97,10 @@ export function fuseCharacters(
     inference_steps: inferenceSteps,
     vocal_language: vp.language || 'en',
     thinking: true,
-    audio_format: 'wav',
+    // mp3, no wav: en serverless el audio vuelve en base64 dentro del JSON.
+    // 120s en wav son ~23MB (~31MB en base64), por encima del límite de
+    // payload de RunPod. En mp3 el mismo audio son ~3MB.
+    audio_format: 'mp3',
   }
 }
 

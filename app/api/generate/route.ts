@@ -46,17 +46,20 @@ export async function POST(req: NextRequest) {
     // 2. Build fusion payload
     const payload = fuseCharacters(fullRhythm, fullMelody, fullVocals, lyrics)
 
-    // 3. Submit to ACE-Step
+    // 3. Encolar el job en RunPod Serverless
     const taskId = await releaseTask(payload)
 
     // 4. Poll for result — timeout 20s antes del límite de Vercel
     const audioBuffer = await waitForResult(taskId, undefined, 280000)
 
+    const format = payload.audio_format === 'wav' ? 'wav' : 'mp3'
+    const mime = format === 'wav' ? 'audio/wav' : 'audio/mpeg'
+
     return new NextResponse(new Uint8Array(audioBuffer), {
       status: 200,
       headers: {
-        'Content-Type': 'audio/wav',
-        'Content-Disposition': `inline; filename="${taskId}.wav"`,
+        'Content-Type': mime,
+        'Content-Disposition': `inline; filename="${taskId}.${format}"`,
         'X-Task-Id': taskId,
         'X-Lyrics': encodeURIComponent(lyrics),
       },
