@@ -11,6 +11,12 @@ on:
       - '.github/workflows/build-worker.yml'
   workflow_dispatch:
 
+# A superseded build must not outlive the one that replaced it -- otherwise a
+# slower older run can push its image over `latest` after the newer one landed.
+concurrency:
+  group: build-worker-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
