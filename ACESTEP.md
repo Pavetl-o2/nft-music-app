@@ -72,7 +72,7 @@ Construido por `fuseCharacters()` en `lib/fusion.ts` a partir de los
 | `time_signature` | del **rhythm** |
 | `audio_duration` | dinámica según nº de líneas cantadas (ver §3.3) |
 | `batch_size` | `1` |
-| `inference_steps` | `30` si los 3 comparten género, si no `25` |
+| `inference_steps` | `30` si los 3 comparten género, si no `25` — **ver §3.7** |
 | `vocal_language` | de los **vocals** |
 | `thinking` | `true` |
 | `audio_format` | `"wav"` |
@@ -138,6 +138,45 @@ No es de ACE-Step, pero se depuró en la misma sesión.
 **Causa:** `.card::before` con `position:absolute; inset:0` interceptaba todos
 los clicks. **Fix:** `pointer-events: none` en el pseudo-elemento.
 
+### 3.7 `inference_steps` fuera de rango para el modelo turbo
+
+**Pendiente de corregir.** `lib/fusion.ts` manda `25` o `30` pasos.
+
+Según la documentación oficial, el rango depende del modelo:
+
+| Modelo | Rango válido | Recomendado |
+|---|---|---|
+| `acestep-v15-turbo` (por defecto) | 1–20 | **8** |
+| `acestep-v15-base` | 1–200 | 32–64 |
+
+El modelo por defecto del servidor es **turbo** (`ACESTEP_CONFIG_PATH=acestep-v15-turbo`),
+así que 25–30 pasos está por encima del máximo. Los modelos turbo están destilados
+para pocos pasos: más pasos no mejoran la calidad, solo queman GPU.
+
+En un pod da igual (se paga por hora). En **serverless se paga por segundo**, así
+que esto multiplica el costo por generación sin beneficio.
+
+Opciones: bajar `inference_steps` a ~8, o cambiar a `acestep-v15-base` con
+`guidance_scale` y `shift` (base sí aprovecha 32–64 pasos, pero es más lento).
+
+### 3.8 Parámetros útiles que no estamos usando
+
+De la documentación oficial:
+
+| Parámetro | Para qué nos sirve |
+|---|---|
+| `use_format: true` | deja que el LM pula el prompt y las letras antes de generar |
+| `model` | elegir DiT explícitamente en vez de depender del default |
+| `seed` + `use_random_seed: false` | generación reproducible (útil para depurar) |
+| `guidance_scale` | solo aplica al modelo base, no al turbo |
+| `ACESTEP_OFFLOAD_TO_CPU=true` | permite audios más largos con poca VRAM — habría evitado el OOM de §3.4 |
+| `GET /health` | comprobar que el contenedor está vivo tras un cold start |
+| `GET /v1/models` | confirmar qué modelo está cargado realmente |
+
+Autenticación: el servidor acepta `ACESTEP_API_KEY`. Con el pod abierto al proxy
+público nunca se activó — la variable `ACESTEP_API_KEY` existe en `.env.example`
+pero está vacía y sin usar.
+
 ---
 
 ## 4. La respuesta llega como binario, no como JSON
@@ -184,8 +223,12 @@ ACESTEP_BASE_URL=https://<pod-id>-8001.proxy.runpod.net
 
 ### Serverless (migración en curso)
 
-RunPod Serverless usa una API **distinta** — el contrato de arriba se envuelve
-dentro de un handler:
+**Diseño del worker:** el servidor de ACE-Step es HTTP normal, así que el
+contenedor levanta `python -m acestep.api_server` en `localhost:8001` y el
+handler de RunPod reusa exactamente el mismo flujo de §1. El contrato no cambia,
+solo se mueve adentro del contenedor.
+
+RunPod Serverless expone por fuera una API **distinta**:
 
 ```
 POST https://api.runpod.ai/v2/<endpoint_id>/run     -> { "id": "..." }
