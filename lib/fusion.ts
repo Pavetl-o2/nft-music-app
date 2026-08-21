@@ -15,13 +15,25 @@ export interface FusionPayload {
   vocal_language: string
   thinking: boolean
   audio_format: string
+  // Deja que el LM reescriba nuestra lista de tags como una descripción
+  // coherente antes de generar. Nuestro prompt son ~19 tags planos con señales
+  // que compiten entre sí, y el modelo acababa quedándose con las equivocadas.
+  use_format: boolean
 }
 
-// Efectos de pedal de guitarra. En los datos hay personajes de piano con estos
-// FX asignados, y esas señales dominan la lectura del modelo: un personaje de
-// piano acabó generando guitarra distorsionada. Se filtran cuando el
-// instrumento principal no es una guitarra.
-const GUITAR_FX = ['distortion', 'wah', 'fuzz', 'overdrive', 'crunch', 'feedback', 'palm mute']
+// Efectos de pedal de guitarra. Los datos se los asignan a personajes de piano
+// (6 de 111 melodías) y a personajes de ritmo (8 de 111), sin mirar qué
+// instrumento lleva la melodía. Esas señales dominan la lectura del modelo: un
+// personaje de piano acabó generando guitarra distorsionada. Se filtran de
+// AMBAS fuentes cuando el instrumento principal no es una guitarra.
+const GUITAR_FX = [
+  'distortion', 'distorted', 'wah', 'fuzz', 'overdrive', 'crunch', 'feedback', 'palm mute',
+]
+
+function dropGuitarFx(keywords: string[], isGuitarLead: boolean): string[] {
+  if (isGuitarLead) return keywords
+  return keywords.filter(k => !GUITAR_FX.some(g => k.toLowerCase().includes(g)))
+}
 
 export function fuseCharacters(
   rhythm: Character,
@@ -43,31 +55,32 @@ export function fuseCharacters(
   // Time signature from rhythm
   const timeSig = rp.time_signature?.split('/')[0] || '4'
 
+  const leadInstrument: string = mp.lead_instrument || ''
+  const isGuitarLead = /guitar/i.test(leadInstrument)
+
   // Style prompt fusion
   const rhythmKeywords = [
     rp.kit_type,
     rp.groove,
     ...(rp.feel_keywords || []),
-    ...(rp.fx_keywords || []),
+    ...dropGuitarFx(rp.fx_keywords || [], isGuitarLead),
   ].filter(Boolean)
-
-  const leadInstrument: string = mp.lead_instrument || ''
-  const isGuitarLead = /guitar/i.test(leadInstrument)
-
-  const toneFx: string[] = (mp.tone_fx || []).filter((fx: string) =>
-    isGuitarLead || !GUITAR_FX.some(g => fx.toLowerCase().includes(g))
-  )
 
   // El instrumento principal NO va aquí: se coloca al frente del prompt para
   // que no quede sepultado entre los demás tags.
   const melodyKeywords = [
     mp.mode,
     ...(mp.mood_keywords || []),
-    ...toneFx,
+    ...dropGuitarFx(mp.tone_fx || [], isGuitarLead),
   ].filter(Boolean)
 
+  // vocal_gender viene en los datos; antes se hardcodeaba "female" y el campo
+  // se ignoraba. Hoy los 111 personajes son female, así que el valor coincide,
+  // pero dejarlo hardcodeado rompería en silencio al agregar personajes.
+  const vocalGender: string = vp.vocal_gender || 'female'
+  const vocalTag = `${vocalGender} ${vp.vocal_style} vocals`
+
   const vocalsKeywords = [
-    `${vp.vocal_style} female vocals`,
     vp.delivery,
     ...(vp.emotion_keywords || []),
   ].filter(Boolean)
@@ -91,11 +104,13 @@ export function fuseCharacters(
     0.1
   )
 
-  // El instrumento principal abre el prompt y se refuerza justo después. Antes
-  // iba como un tag más a mitad de la lista y el modelo lo ignoraba: un
-  // personaje de piano generaba guitarra distorsionada.
+  // Los dos rasgos que el modelo más ignoraba -- instrumento principal y género
+  // vocal -- abren el prompt. Enterrados a mitad de la lista se perdían: un
+  // personaje de piano generaba guitarra distorsionada, y una voz femenina
+  // salía masculina.
   const prompt = [
     leadInstrument ? `${leadInstrument}-led ${genreLabel}` : genreLabel,
+    vocalTag,
     leadInstrument ? `prominent ${leadInstrument} melody` : null,
     ...rhythmKeywords,
     ...melodyKeywords,
@@ -115,6 +130,7 @@ export function fuseCharacters(
     inference_steps: inferenceSteps,
     vocal_language: vp.language || 'en',
     thinking: true,
+    use_format: true,
     // mp3, no wav: en serverless el audio vuelve en base64 dentro del JSON.
     // Un wav de un par de minutos son ~23MB (~31MB en base64), por encima del
     // límite de payload de RunPod. En mp3 el mismo audio son ~3MB.
