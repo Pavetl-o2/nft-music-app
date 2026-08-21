@@ -49,7 +49,7 @@ ENV ACESTEP_API_HOST=127.0.0.1 \
     ACESTEP_LM_MODEL_PATH=acestep-5Hz-lm-0.6B \
     ACESTEP_LM_BACKEND=pt \
     ACESTEP_DEVICE=auto \
-    ACESTEP_INIT_SERVICE=true \
+    ACESTEP_NO_INIT=false \
     ACESTEP_CHECKPOINTS_DIR=/runpod-volume/checkpoints \
     HF_HOME=/runpod-volume/huggingface
 
@@ -60,7 +60,9 @@ ENV ACESTEP_API_HOST=127.0.0.1 \
 #   ACESTEP_LM_BACKEND    `pt` rather than `vllm`: vllm is faster under load but
 #                         starts far slower, which is the wrong trade on a
 #                         serverless cold start.
-#   ACESTEP_INIT_SERVICE  load the models at boot instead of on first request,
-#                         so the eager boot in handler.py absorbs the cost.
+#   ACESTEP_NO_INIT       false loads the models at boot rather than on the
+#                         first request. Lazy loading costs ~80s *inside* the
+#                         job, eating the caller's timeout budget. Note this is
+#                         the real variable -- ACESTEP_INIT_SERVICE is ignored.
 
 CMD ["uv", "run", "python", "-u", "handler.py"]

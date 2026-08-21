@@ -184,7 +184,25 @@ había pesos en el disco del contenedor, los mueve antes de enlazar.
 También avisa en el log si `/runpod-volume` no está montado, en vez de fallar
 en silencio.
 
-### 3.9 Parámetros útiles que no estamos usando
+### 3.9 `ACESTEP_INIT_SERVICE` no existe — es `ACESTEP_NO_INIT`
+
+**Causa:** el Dockerfile traía `ACESTEP_INIT_SERVICE=true` para precargar los
+modelos al arrancar. Esa variable no la lee nadie. El log lo dice claro:
+
+```
+[API Server] Models will be lazy-loaded on first request
+[API Server] Set ACESTEP_NO_INIT=false to load models at startup
+```
+
+**Consecuencia:** los modelos cargaban en la *primera petición*, metiendo ~80 s
+dentro del tiempo del job. Un job de 30 s de audio tardaba 90 s en total.
+Eso se come el presupuesto de 280 s que tiene el polling desde Vercel.
+
+**Fix:** `ACESTEP_NO_INIT=false`. La carga se mueve al arranque del contenedor,
+antes de que `/health` responda — o sea que `_wait_until_healthy()` la absorbe
+y el job solo mide la generación real.
+
+### 3.10 Parámetros útiles que no estamos usando
 
 De la documentación oficial:
 
