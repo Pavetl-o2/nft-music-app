@@ -86,6 +86,11 @@ export function CharacterCard({ character, selected, onClick, compact, adminMode
               <img
                 src={character.image_url}
                 alt={character.name}
+                // La rejilla monta los 111 personajes del rol de golpe. Sin
+                // esto el navegador pide las 111 imágenes al abrir la página,
+                // aunque solo se vean seis.
+                loading="lazy"
+                decoding="async"
                 style={{
                   width: '100%',
                   height: '100%',
