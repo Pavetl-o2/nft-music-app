@@ -26,6 +26,20 @@ const NEGATIVE_PROMPT = "bad anatomy, bad hands, missing fingers, extra digits, 
 
 const ROLES = ['rhythm', 'melody', 'vocals'] as const
 
+// El instrumento vive bajo una clave distinta según el rol, y solo en
+// public_metadata: game_params nunca se expone al cliente. CharacterCard lee
+// exactamente estas mismas claves para su chip de rasgo.
+function instrumentOf(char: CharacterWithImage): string {
+  const meta = char.public_metadata as any
+  return meta?.kit_type || meta?.instrument || meta?.vocal_style || ''
+}
+
+const INSTRUMENT_LABEL: Record<string, string> = {
+  rhythm: 'KIT',
+  melody: 'INSTRUMENT',
+  vocals: 'STYLE',
+}
+
 export default function CollectionPage() {
   const router = useRouter()
   const [characters, setCharacters] = useState<CharacterWithImage[]>([])
@@ -36,6 +50,7 @@ export default function CollectionPage() {
   })
   const [activeRole, setActiveRole] = useState<string>('rhythm')
   const [filter, setFilter] = useState<string>('all')
+  const [instrumentFilter, setInstrumentFilter] = useState<string>('all')
   const [detailChar, setDetailChar] = useState<CharacterWithImage | null>(null)
   const [promptsLoaded, setPromptsLoaded] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -146,11 +161,16 @@ export default function CollectionPage() {
   }
 
   const roleCharacters = characters.filter(c => c.role === activeRole)
-  const filtered = filter === 'all'
-    ? roleCharacters
-    : roleCharacters.filter(c => c.genre === filter)
+  const filtered = roleCharacters.filter(c =>
+    (filter === 'all' || c.genre === filter) &&
+    (instrumentFilter === 'all' || instrumentOf(c) === instrumentFilter)
+  )
 
   const genres = ['all', ...Array.from(new Set(roleCharacters.map(c => c.genre)))]
+  const instruments = [
+    'all',
+    ...Array.from(new Set(roleCharacters.map(instrumentOf).filter(Boolean))).sort(),
+  ]
   const allSelected = ROLES.every(r => selected[r] !== null)
 
   const totals = useMemo(() => ({
@@ -524,7 +544,7 @@ export default function CollectionPage() {
             {ROLES.map(role => (
               <button
                 key={role}
-                onClick={() => { setActiveRole(role); setFilter('all') }}
+                onClick={() => { setActiveRole(role); setFilter('all'); setInstrumentFilter('all') }}
                 className="display"
                 style={{
                   flex: 1,
@@ -574,30 +594,50 @@ export default function CollectionPage() {
             <div style={{ position: 'absolute', right: -2, top: 0, bottom: 0, width: 2, background: 'var(--ink)' }} />
           </div>
 
-          {/* GENRE FILTERS */}
+          {/* GENRE + INSTRUMENT FILTERS */}
           {!loading && (
             <div
               className="paper-card"
-              style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}
+              style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}
             >
-              <div
-                className="font-mono"
-                style={{ fontSize: 10, letterSpacing: '.3em', color: 'var(--pencil)', marginRight: 6 }}
-              >
-                GENRE /
-              </div>
-              {genres.map(g => (
-                <button
-                  key={g}
-                  onClick={() => setFilter(g)}
-                  className={`chip chip-accent ${filter === g ? 'chip-on' : ''}`}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <div
+                  className="font-mono"
+                  style={{ fontSize: 10, letterSpacing: '.3em', color: 'var(--pencil)', marginRight: 6 }}
                 >
-                  {g === 'all' ? 'ALL' : g.toUpperCase().replace('_', ' ')}
-                </button>
-              ))}
-              <div style={{ flex: 1, minWidth: 20 }} />
-              <div className="font-mono" style={{ fontSize: 10, letterSpacing: '.2em', color: 'var(--pencil)' }}>
-                SHOWING {filtered.length}/{totals[activeRole as keyof typeof totals]}
+                  GENRE /
+                </div>
+                {genres.map(g => (
+                  <button
+                    key={g}
+                    onClick={() => setFilter(g)}
+                    className={`chip chip-accent ${filter === g ? 'chip-on' : ''}`}
+                  >
+                    {g === 'all' ? 'ALL' : g.toUpperCase().replace(/_/g, ' ')}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <div
+                  className="font-mono"
+                  style={{ fontSize: 10, letterSpacing: '.3em', color: 'var(--pencil)', marginRight: 6 }}
+                >
+                  {INSTRUMENT_LABEL[activeRole] || 'INSTRUMENT'} /
+                </div>
+                {instruments.map(inst => (
+                  <button
+                    key={inst}
+                    onClick={() => setInstrumentFilter(inst)}
+                    className={`chip chip-accent ${instrumentFilter === inst ? 'chip-on' : ''}`}
+                  >
+                    {inst === 'all' ? 'ALL' : inst.toUpperCase()}
+                  </button>
+                ))}
+                <div style={{ flex: 1, minWidth: 20 }} />
+                <div className="font-mono" style={{ fontSize: 10, letterSpacing: '.2em', color: 'var(--pencil)' }}>
+                  SHOWING {filtered.length}/{totals[activeRole as keyof typeof totals]}
+                </div>
               </div>
             </div>
           )}
