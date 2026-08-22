@@ -15,6 +15,17 @@ export interface FusionPayload {
   vocal_language: string
   thinking: boolean
   audio_format: string
+  // Impide que el LM reescriba nuestro caption antes de pasarlo al DiT.
+  //
+  // Con el default (true) el DiT NUNCA ve lo que mandamos. Capturado en el log
+  // de un worker: enviamos "female whispered vocals" y el bloque
+  // "DiT TEXT ENCODER INPUT" recibió "The male lead vocal is delivered with an
+  // angsty strain". El mismo mecanismo se comía el instrumento principal.
+  //
+  // Explica el "a veces sí, a veces no": la reescritura es estocástica. Y
+  // explica por qué recortar a 12 tags ayudó a medias — mejoraba el texto que
+  // entra al LM, no el que llega al generador.
+  use_cot_caption: boolean
 }
 
 // NO activar use_format: la documentación dice que el LM reescribe "caption
@@ -161,6 +172,7 @@ export function fuseCharacters(
     inference_steps: inferenceSteps,
     vocal_language: vp.language || 'en',
     thinking: true,
+    use_cot_caption: false,
     // mp3, no wav: en serverless el audio vuelve en base64 dentro del JSON.
     // Un wav de un par de minutos son ~23MB (~31MB en base64), por encima del
     // límite de payload de RunPod. En mp3 el mismo audio son ~3MB.
