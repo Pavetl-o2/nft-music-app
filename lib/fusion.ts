@@ -61,19 +61,26 @@ function genreWords(genre: string): string {
 // de una sección real (brass/string section) en vez de un adjetivo suelto.
 function instrumentFamily(instrument: string): string | null {
   const i = instrument.toLowerCase()
-  if (/synt|electro|synth|digital|wave|arp|piano synth/.test(i)) return 'synth'
+  // Piano-synth -> piano: guitarra sintetizada no aporta un second lead; que el
+  // DiT trate "piano synth" como piano (acústico) y no como synth de sonido.
+  if (/bass/.test(i)) return 'live bass'
+  if (/synt|electro|synth|digital|wave|arp/.test(i)) {
+    // si es "piano synth" lo tratamos como piano (no synth)
+    if (/piano/.test(i)) return 'piano'
+    return 'synth'
+  }
   if (/sax|saxophone|clarinet|flute|trumpet|trombone|horn|brass/.test(i)) return 'brass section'
   if (/violin|viola|cello|string|bow/.test(i)) return 'string section'
   if (/piano|keyboard|keys|organ/.test(i)) return 'piano'
   if (/drum|kit|percussion/.test(i)) return 'live drum kit'
-  if (/guitar|bass/.test(i)) return 'live guitar'
+  if (/guitar/.test(i)) return 'live guitar'
   return null
 }
 function instrumentReinforcement(instrument: string, genreLabel: string): string[] {
   if (!instrument) return []
   return [
     `${instrument}-led ${genreLabel}`,
-    `${instrument} lead`,
+    instrument.includes('bass') ? 'melodic bass lead' : `${instrument} lead`,
     `prominent ${instrument} solo`,
   ]
 }

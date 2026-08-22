@@ -5717,12 +5717,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Funk",
-      "instrument": "Piano Synth"
+      "instrument": "Piano"
     },
     "game_params": {
       "key_preference": "C",
       "mode": "major",
-      "lead_instrument": "piano synth",
+      "lead_instrument": "piano",
       "harmonic_complexity": 0.49,
       "tone_fx": [
         "clean",
@@ -5745,12 +5745,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Funk",
-      "instrument": "Piano Synth"
+      "instrument": "Piano"
     },
     "game_params": {
       "key_preference": "F",
       "mode": "minor",
-      "lead_instrument": "piano synth",
+      "lead_instrument": "piano",
       "harmonic_complexity": 0.45,
       "tone_fx": [
         "clean",
@@ -5829,12 +5829,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Funk",
-      "instrument": "Piano Synth"
+      "instrument": "Piano"
     },
     "game_params": {
       "key_preference": "Ab",
       "mode": "major",
-      "lead_instrument": "piano synth",
+      "lead_instrument": "piano",
       "harmonic_complexity": 0.86,
       "tone_fx": [
         "envelope filter",
