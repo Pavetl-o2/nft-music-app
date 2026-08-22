@@ -53,6 +53,45 @@ function genreWords(genre: string): string {
   return genre.replace(/_/g, ' ')
 }
 
+// ── Refuerzo del instrumento principal ──────────────────────────────────────
+// El modelo turbo tiende a "leer" tags abstractos de mood como sinte/piano y a
+// dejar caer el instrumento acústico real (ver: violín→sintetizador, sax casi
+// ausente). Tres refuerzos con variación + un token de "familia" le dan al DiT
+// la señal no ambigua de cuál es el lead, y el token de familia emula el timbre
+// de una sección real (brass/string section) en vez de un adjetivo suelto.
+function instrumentFamily(instrument: string): string | null {
+  const i = instrument.toLowerCase()
+  if (/synt|electro|synth|digital|wave|arp|piano synth/.test(i)) return 'synth'
+  if (/sax|saxophone|clarinet|flute|trumpet|trombone|horn|brass/.test(i)) return 'brass section'
+  if (/violin|viola|cello|string|bow/.test(i)) return 'string section'
+  if (/piano|keyboard|keys|organ/.test(i)) return 'piano'
+  if (/drum|kit|percussion/.test(i)) return 'live drum kit'
+  if (/guitar|bass/.test(i)) return 'live guitar'
+  return null
+}
+function instrumentReinforcement(instrument: string, genreLabel: string): string[] {
+  if (!instrument) return []
+  return [
+    `${instrument}-led ${genreLabel}`,
+    `${instrument} lead`,
+    `prominent ${instrument} solo`,
+  ]
+}
+
+// ── Filtro de mood "ambiente / electrónico" ────────────────────────────────
+// Estos adjetivos abstractos no refuerzan un instrumento acústico real y
+// desvían al DiT hacía un timbre synth/piano (ver: sax→piano, violín→synth).
+// Para leads acústicos (brass/string/piano/guitar/drums) se eliminan de los
+// extras; para leads synth/electronic se conservan, porque ahí un sonido
+// "atmosférico" sí es el estilo. Sustitución opcional con la familia.
+const AMBIENT_TERMS = [
+  'detached', 'cerebral', 'isolation', 'float', 'floating', 'awe', 'groovy', 'ether',
+]
+function filterAmbient(tokens: string[], acousticFamily: boolean): string[] {
+  if (!acousticFamily) return tokens
+  return tokens.filter(t => !AMBIENT_TERMS.some(a => t.toLowerCase().includes(a)))
+}
+
 // El prompt es condicionamiento suave, no instrucciones: cada tag extra diluye
 // a los demás. Con 22 tags el modelo ignoraba el instrumento principal y el
 // género vocal. Este tope obliga a que solo sobreviva lo que más define la
@@ -137,10 +176,26 @@ export function fuseCharacters(
   // modelo más ignoraba -- instrumento principal y género vocal -- abren el
   // prompt: enterrados a mitad de la lista se perdían, y un personaje de violín
   // salía sin violín mientras una voz femenina salía masculina.
+  //
+  // Cambio Route 2: el instrumento se refuerza 3× con variación (led / lead /
+  // solo) y se añade un token de familia (brass section, string section...)
+  // DELANTE del label de género, para que el DiT lo vea primero y como familia
+  // real, no como un adjetivo que la distorsión del mood pueda derribar.
+  const instrumentTokens = leadInstrument
+    ? [
+        ...instrumentReinforcement(leadInstrument, genreLabel),
+        instrumentFamily(leadInstrument),
+      ].filter(Boolean)
+    : []
+
+  // ¿Es un instrumento acústico (no synth/eléctrico)? Si sí, filtramos los
+  // moods ambiente/electrónico de los extras para no empujar hacia synth/piano.
+  const family = instrumentFamily(leadInstrument)
+  const acousticFamily = family !== 'synth' && family !== null
+
   const core = [
-    leadInstrument ? `${leadInstrument}-led ${genreLabel}` : genreLabel,
+    ...instrumentTokens,
     vocalTag,
-    leadInstrument ? `prominent ${leadInstrument} melody` : null,
     `key of ${mp.key_preference} ${mp.mode}`,
     // Un solo tag: con la coma dentro contaría como dos contra el presupuesto.
     weirdness > 0.6 ? 'experimental and unconventional' : null,
@@ -149,8 +204,13 @@ export function fuseCharacters(
   // Color: se toma en rondas para que los tres personajes aporten algo antes de
   // que nadie aporte su segundo rasgo. Si se concatenaran las listas enteras,
   // el ritmo gastaría el presupuesto y las vocales no llegarían.
+  // Route 2: si el lead es acústico, se filtran los moods ambiente/electrónico.
+  const rounds = [
+    filterAmbient(rhythmKeywords, acousticFamily) as string[],
+    filterAmbient(melodyKeywords, acousticFamily) as string[],
+    filterAmbient(vocalsKeywords, acousticFamily) as string[],
+  ]
   const extras: string[] = []
-  const rounds = [rhythmKeywords, melodyKeywords, vocalsKeywords]
   for (let i = 0; i < Math.max(...rounds.map(r => r.length)); i++) {
     for (const list of rounds) {
       if (list[i]) extras.push(list[i])
