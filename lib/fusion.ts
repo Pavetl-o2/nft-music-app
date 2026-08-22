@@ -15,6 +15,12 @@ export interface FusionPayload {
   vocal_language: string
   thinking: boolean
   audio_format: string
+  // Empuja al LM lejos de los instrumentos solistas que no son el principal.
+  // El DiT turbo ignora CFG por completo ("Turbo model detected: overriding
+  // guidance_scale 7.0 -> 1.0"), así que un prompt negativo no lo afecta; pero
+  // el LM de 5Hz sí usa CFG (lm_cfg_scale 2.5) y es quien genera los audio
+  // codes que condicionan al DiT. Es la única vía negativa que queda abierta.
+  lm_negative_prompt: string
 }
 
 // NO activar use_format: la documentación dice que el LM reescribe "caption
@@ -47,6 +53,28 @@ function genreWords(genre: string): string {
 // género vocal. Este tope obliga a que solo sobreviva lo que más define la
 // canción.
 const MAX_PROMPT_TAGS = 12
+
+// Instrumentos que en una grabación se llevan un solo y le roban el papel al
+// principal. Un personaje de piano en jazz salía con un solo de saxofón: el
+// modelo no lo añade porque se lo pidamos, sino porque el jazz de su corpus
+// lleva saxofón. Se nombran en negativo, menos el que sí debe protagonizar.
+//
+// Solo instrumentos SOLISTAS: la sección rítmica no entra. Suprimir la guitarra
+// de acompañamiento en una canción de rock la dejaría hueca.
+const SOLO_INSTRUMENTS = [
+  'saxophone', 'trumpet', 'brass section', 'flute', 'harmonica',
+  'violin', 'piano', 'organ', 'guitar solo',
+]
+
+function competingInstruments(leadInstrument: string): string {
+  const lead = leadInstrument.toLowerCase()
+  const rivals = SOLO_INSTRUMENTS.filter(
+    i => !lead.includes(i) && !i.includes(lead)
+  )
+  // "NO USER INPUT" es el valor por defecto que espera el servidor cuando no
+  // hay nada que negar.
+  return rivals.length ? rivals.join(', ') : 'NO USER INPUT'
+}
 
 export function fuseCharacters(
   rhythm: Character,
@@ -161,6 +189,7 @@ export function fuseCharacters(
     inference_steps: inferenceSteps,
     vocal_language: vp.language || 'en',
     thinking: true,
+    lm_negative_prompt: competingInstruments(leadInstrument),
     // mp3, no wav: en serverless el audio vuelve en base64 dentro del JSON.
     // Un wav de un par de minutos son ~23MB (~31MB en base64), por encima del
     // límite de payload de RunPod. En mp3 el mismo audio son ~3MB.
