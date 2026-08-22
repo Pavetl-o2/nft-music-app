@@ -41,6 +41,11 @@ RUN uv python install 3.11 \
 # RunPod SDK + requests go into the same venv so `uv run` resolves them.
 RUN uv pip install runpod requests
 
+# Falla el build si el venv no quedó donde el CMD lo va a buscar, o si le falta
+# algo. Descubrir esto en runtime cuesta un worker muerto y una cola atascada.
+RUN /opt/acestep/.venv/bin/python -c \
+      "import runpod, requests, acestep; print('venv OK')"
+
 COPY handler.py /opt/acestep/handler.py
 
 ENV ACESTEP_API_HOST=127.0.0.1 \
@@ -65,4 +70,21 @@ ENV ACESTEP_API_HOST=127.0.0.1 \
 #                         job, eating the caller's timeout budget. Note this is
 #                         the real variable -- ACESTEP_INIT_SERVICE is ignored.
 
-CMD ["uv", "run", "python", "-u", "handler.py"]
+# Ejecutar el intérprete del venv directamente, NO `uv run`.
+#
+# `uv run` re-resuelve el entorno en cada arranque, y esa resolución intenta
+# descargar flash-attn desde una URL directa de GitHub -- un wheel de Windows,
+# en un contenedor Linux. Con UV_HTTP_TIMEOUT en 30s la descarga se pasaba y el
+# worker moría con "exit code 2" antes de que Python llegara a correr:
+#
+#   error: Failed to generate package metadata for `flash-attn==2.8.2 @ direct+...
+#   Caused by: Failed to download distribution due to network timeout
+#   worker exited with exit code 2
+#
+# Como dependía de la red, fallaba de forma intermitente: RunPod veía la cola
+# sin drenar, levantaba más workers, y todos morían igual. Las dependencias ya
+# quedaron instaladas por `uv sync --frozen` durante el build, así que en
+# runtime no hay nada que resolver.
+ENV PATH="/opt/acestep/.venv/bin:${PATH}"
+
+CMD ["python", "-u", "handler.py"]
