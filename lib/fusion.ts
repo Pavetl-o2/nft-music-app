@@ -15,11 +15,12 @@ export interface FusionPayload {
   vocal_language: string
   thinking: boolean
   audio_format: string
-  // Deja que el LM reescriba nuestra lista de tags como una descripción
-  // coherente antes de generar. Nuestro prompt son ~19 tags planos con señales
-  // que compiten entre sí, y el modelo acababa quedándose con las equivocadas.
-  use_format: boolean
 }
+
+// NO activar use_format: la documentación dice que el LM reescribe "caption
+// AND lyrics", y al probarlo la canción salió cantada en otro idioma pese a
+// vocal_language: 'en'. El problema de fondo -- demasiados tags compitiendo --
+// se ataca con MAX_PROMPT_TAGS, no delegando la letra al modelo.
 
 // Efectos de pedal de guitarra. Los datos se los asignan a personajes de piano
 // (6 de 111 melodías) y a personajes de ritmo (8 de 111), sin mirar qué
@@ -34,6 +35,18 @@ function dropGuitarFx(keywords: string[], isGuitarLead: boolean): string[] {
   if (isGuitarLead) return keywords
   return keywords.filter(k => !GUITAR_FX.some(g => k.toLowerCase().includes(g)))
 }
+
+// Los géneros son enums con guión bajo ("prog_rock"). Enviarlos crudos mete una
+// no-palabra en el prompt; el modelo no la reconoce como género.
+function genreWords(genre: string): string {
+  return genre.replace(/_/g, ' ')
+}
+
+// El prompt es condicionamiento suave, no instrucciones: cada tag extra diluye
+// a los demás. Con 22 tags el modelo ignoraba el instrumento principal y el
+// género vocal. Este tope obliga a que solo sobreviva lo que más define la
+// canción.
+const MAX_PROMPT_TAGS = 12
 
 export function fuseCharacters(
   rhythm: Character,
@@ -85,12 +98,17 @@ export function fuseCharacters(
     ...(vp.emotion_keywords || []),
   ].filter(Boolean)
 
-  // Genre fusion
-  const genres = [rhythm.genre, melody.genre, vocals.genre]
-  const uniqueGenres = [...new Set(genres)]
-  const genreLabel = uniqueGenres.length === 1
-    ? `${uniqueGenres[0]}`
-    : `${uniqueGenres.join('-')} fusion`
+  // Un solo género, no una fusión de tres. "jazz-prog_rock-grunge fusion" es
+  // musicalmente contradictorio y el modelo terminaba eligiendo uno al azar.
+  // Gana el personaje de mayor rareza: le da peso de juego al PWR, que hasta
+  // ahora era puramente cosmético. Empate -> melodía, que ya aporta instrumento
+  // y tonalidad.
+  const genreOwner = [melody, rhythm, vocals].reduce((best, c) =>
+    c.rarity_score > best.rarity_score ? c : best
+  )
+  const genreLabel = genreWords(genreOwner.genre)
+
+  const uniqueGenres = [...new Set([rhythm.genre, melody.genre, vocals.genre])]
 
   // El modelo turbo está destilado para 8 pasos (rango válido 1-20). Más pasos
   // no mejoran la calidad, solo queman GPU — y en serverless se paga por
@@ -104,20 +122,33 @@ export function fuseCharacters(
     0.1
   )
 
-  // Los dos rasgos que el modelo más ignoraba -- instrumento principal y género
-  // vocal -- abren el prompt. Enterrados a mitad de la lista se perdían: un
-  // personaje de piano generaba guitarra distorsionada, y una voz femenina
-  // salía masculina.
-  const prompt = [
+  // Núcleo: la identidad de la canción. Nunca se recorta. Los dos rasgos que el
+  // modelo más ignoraba -- instrumento principal y género vocal -- abren el
+  // prompt: enterrados a mitad de la lista se perdían, y un personaje de violín
+  // salía sin violín mientras una voz femenina salía masculina.
+  const core = [
     leadInstrument ? `${leadInstrument}-led ${genreLabel}` : genreLabel,
     vocalTag,
     leadInstrument ? `prominent ${leadInstrument} melody` : null,
-    ...rhythmKeywords,
-    ...melodyKeywords,
-    ...vocalsKeywords,
     `key of ${mp.key_preference} ${mp.mode}`,
-    weirdness > 0.6 ? 'experimental, unconventional' : null,
-  ].filter(Boolean).join(', ')
+    // Un solo tag: con la coma dentro contaría como dos contra el presupuesto.
+    weirdness > 0.6 ? 'experimental and unconventional' : null,
+  ].filter(Boolean) as string[]
+
+  // Color: se toma en rondas para que los tres personajes aporten algo antes de
+  // que nadie aporte su segundo rasgo. Si se concatenaran las listas enteras,
+  // el ritmo gastaría el presupuesto y las vocales no llegarían.
+  const extras: string[] = []
+  const rounds = [rhythmKeywords, melodyKeywords, vocalsKeywords]
+  for (let i = 0; i < Math.max(...rounds.map(r => r.length)); i++) {
+    for (const list of rounds) {
+      if (list[i]) extras.push(list[i])
+    }
+  }
+
+  const prompt = [...core, ...extras]
+    .slice(0, MAX_PROMPT_TAGS)
+    .join(', ')
 
   return {
     prompt,
@@ -130,7 +161,6 @@ export function fuseCharacters(
     inference_steps: inferenceSteps,
     vocal_language: vp.language || 'en',
     thinking: true,
-    use_format: true,
     // mp3, no wav: en serverless el audio vuelve en base64 dentro del JSON.
     // Un wav de un par de minutos son ~23MB (~31MB en base64), por encima del
     // límite de payload de RunPod. En mp3 el mismo audio son ~3MB.
