@@ -51,6 +51,20 @@ export async function releaseTask(payload: FusionPayload): Promise<string> {
   return data.id
 }
 
+// Rendirse sin cancelar deja el job corriendo: sigue consumiendo GPU por un
+// resultado que nadie va a recoger, y el siguiente intento se encola detrás.
+// Eso convertía un timeout aislado en una cola que ya nunca se vaciaba.
+async function cancelJob(jobId: string): Promise<void> {
+  try {
+    await fetch(`${BASE_URL}/cancel/${jobId}`, {
+      method: 'POST',
+      headers: authHeaders(),
+    })
+  } catch {
+    // Best effort: si no se puede cancelar, el error del timeout manda igual.
+  }
+}
+
 export async function waitForResult(
   jobId: string,
   onProgress?: (msg: string) => void,
@@ -111,5 +125,6 @@ export async function waitForResult(
     }
   }
 
+  await cancelJob(jobId)
   throw new Error('Timeout: la generación tardó demasiado. Intenta de nuevo en unos minutos.')
 }

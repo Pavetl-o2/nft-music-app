@@ -280,11 +280,24 @@ def handler(job):
         return {"error": str(exc)}
 
 
-# Boot the model server while the worker is still initialising, so the first
-# real request does not pay for the weight download.
-try:
-    _ensure_server()
-except Exception as exc:  # noqa: BLE001 - surfaced again per-job
-    _log(f"eager boot failed, will retry on first job: {exc}")
+def _eager_boot():
+    """Warm the model server up before the first request arrives."""
+    try:
+        _ensure_server()
+    except Exception as exc:  # noqa: BLE001 - surfaced again per-job
+        _log(f"eager boot failed, will retry on first job: {exc}")
+
+
+# This MUST NOT block: runpod.serverless.start() is what registers the worker
+# as available, so anything slow ahead of it leaves the container running and
+# billing while its jobs sit unclaimed in the queue -- and RunPod, seeing a
+# queue that will not drain, scales up more workers that do the same thing.
+#
+# The blocking version was survivable only while ACE-Step loaded models lazily
+# and answered /health in seconds. With ACESTEP_NO_INIT=false the health check
+# waits for the full load, which turned a warm-up into a ~130s outage per cold
+# start. _ensure_server() is idempotent and lock-guarded, so a job arriving
+# mid-boot simply waits inside the handler -- which is where waiting belongs.
+threading.Thread(target=_eager_boot, name='eager-boot', daemon=True).start()
 
 runpod.serverless.start({"handler": handler})
