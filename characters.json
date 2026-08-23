@@ -3477,12 +3477,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Rock",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "E",
       "mode": "minor",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.54,
       "tone_fx": [
         "overdrive",
@@ -3561,12 +3561,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Rock",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "B",
       "mode": "mixolydian",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.89,
       "tone_fx": [
         "heavy distortion",
@@ -3701,12 +3701,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Rock",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "C",
       "mode": "minor",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.69,
       "tone_fx": [
         "overdrive",
@@ -3813,12 +3813,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Rock",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "A",
       "mode": "minor",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.89,
       "tone_fx": [
         "clean",
@@ -4149,12 +4149,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Rock",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "Ab",
       "mode": "minor",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.22,
       "tone_fx": [
         "distortion",
@@ -4233,12 +4233,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Punk",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "Ab",
       "mode": "minor",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.11,
       "tone_fx": [
         "heavy distortion",
@@ -4289,12 +4289,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Punk",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "B",
       "mode": "minor",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.72,
       "tone_fx": [
         "heavy distortion",
@@ -4317,12 +4317,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Punk",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "C",
       "mode": "minor",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.3,
       "tone_fx": [
         "fuzz",
@@ -4345,12 +4345,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Punk",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "D",
       "mode": "minor",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.4,
       "tone_fx": [
         "fuzz",
@@ -4373,12 +4373,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Punk",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "F",
       "mode": "major",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.18,
       "tone_fx": [
         "fuzz",
@@ -4457,12 +4457,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Punk",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "B",
       "mode": "major",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.31,
       "tone_fx": [
         "heavy distortion",
@@ -4597,12 +4597,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Punk",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "F",
       "mode": "minor",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.81,
       "tone_fx": [
         "heavy distortion",
@@ -4653,12 +4653,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Punk",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "E",
       "mode": "minor",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.59,
       "tone_fx": [
         "fuzz",
@@ -4681,12 +4681,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Punk",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "A",
       "mode": "major",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.82,
       "tone_fx": [
         "heavy distortion",
@@ -4737,12 +4737,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Punk",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "Ab",
       "mode": "major",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.58,
       "tone_fx": [
         "distortion",
@@ -4821,12 +4821,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Grunge",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "Bb",
       "mode": "minor",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.95,
       "tone_fx": [
         "fuzz",
@@ -4877,12 +4877,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Grunge",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "B",
       "mode": "minor",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.66,
       "tone_fx": [
         "fuzz",
@@ -5129,12 +5129,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Grunge",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "G",
       "mode": "minor",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.75,
       "tone_fx": [
         "heavy distortion",
@@ -5409,12 +5409,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Heavy Metal",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "C",
       "mode": "minor",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.16,
       "tone_fx": [
         "shred distortion",
@@ -5437,12 +5437,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Heavy Metal",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "D",
       "mode": "minor",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.35,
       "tone_fx": [
         "high-gain distortion",
@@ -5493,12 +5493,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Heavy Metal",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "C",
       "mode": "phrygian",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.51,
       "tone_fx": [
         "shred distortion",
@@ -5577,12 +5577,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Heavy Metal",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "G",
       "mode": "phrygian",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.79,
       "tone_fx": [
         "high-gain distortion",
@@ -5661,12 +5661,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Heavy Metal",
-      "instrument": "Bass Guitar"
+      "instrument": "Cello"
     },
     "game_params": {
       "key_preference": "D",
       "mode": "phrygian",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "cello",
       "harmonic_complexity": 0.17,
       "tone_fx": [
         "heavy distortion",
@@ -5801,12 +5801,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Funk",
-      "instrument": "Bass Guitar"
+      "instrument": "Organ"
     },
     "game_params": {
       "key_preference": "F",
       "mode": "dorian",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "organ",
       "harmonic_complexity": 0.21,
       "tone_fx": [
         "clean",
@@ -5857,12 +5857,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Funk",
-      "instrument": "Bass Guitar"
+      "instrument": "Organ"
     },
     "game_params": {
       "key_preference": "Bb",
       "mode": "major",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "organ",
       "harmonic_complexity": 0.31,
       "tone_fx": [
         "clean",
@@ -5885,12 +5885,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Funk",
-      "instrument": "Bass Guitar"
+      "instrument": "Organ"
     },
     "game_params": {
       "key_preference": "D",
       "mode": "major",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "organ",
       "harmonic_complexity": 0.36,
       "tone_fx": [
         "clean",
@@ -5941,12 +5941,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Funk",
-      "instrument": "Bass Guitar"
+      "instrument": "Organ"
     },
     "game_params": {
       "key_preference": "D",
       "mode": "dorian",
-      "lead_instrument": "bass guitar",
+      "lead_instrument": "organ",
       "harmonic_complexity": 0.61,
       "tone_fx": [
         "clean",
