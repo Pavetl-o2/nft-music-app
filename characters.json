@@ -5801,12 +5801,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Funk",
-      "instrument": "Organ"
+      "instrument": "Harmonica"
     },
     "game_params": {
       "key_preference": "F",
       "mode": "dorian",
-      "lead_instrument": "organ",
+      "lead_instrument": "harmonica",
       "harmonic_complexity": 0.21,
       "tone_fx": [
         "clean",
@@ -5857,12 +5857,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Funk",
-      "instrument": "Organ"
+      "instrument": "Harmonica"
     },
     "game_params": {
       "key_preference": "Bb",
       "mode": "major",
-      "lead_instrument": "organ",
+      "lead_instrument": "harmonica",
       "harmonic_complexity": 0.31,
       "tone_fx": [
         "clean",
@@ -5885,12 +5885,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Funk",
-      "instrument": "Organ"
+      "instrument": "Harmonica"
     },
     "game_params": {
       "key_preference": "D",
       "mode": "major",
-      "lead_instrument": "organ",
+      "lead_instrument": "harmonica",
       "harmonic_complexity": 0.36,
       "tone_fx": [
         "clean",
@@ -5941,12 +5941,12 @@
     "public_metadata": {
       "role": "Melody",
       "genre": "Funk",
-      "instrument": "Organ"
+      "instrument": "Harmonica"
     },
     "game_params": {
       "key_preference": "D",
       "mode": "dorian",
-      "lead_instrument": "organ",
+      "lead_instrument": "harmonica",
       "harmonic_complexity": 0.61,
       "tone_fx": [
         "clean",

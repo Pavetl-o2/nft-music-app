@@ -69,9 +69,8 @@ function instrumentFamily(instrument: string): string | null {
     if (/piano/.test(i)) return 'piano'
     return 'synth'
   }
-  if (/sax|saxophone|clarinet|flute|trumpet|trombone|horn|brass/.test(i)) return 'brass section'
+  if (/sax|saxophone|clarinet|flute|trumpet|trombone|horn|brass|harmonica/.test(i)) return 'brass section'
   if (/violin|viola|cello|string|bow/.test(i)) return 'string section'
-  if (/organ|hammond|pipe organ/.test(i)) return 'hammond organ'
   if (/piano|keyboard|keys/.test(i)) return 'piano'
   if (/drum|kit|percussion/.test(i)) return 'live drum kit'
   if (/guitar/.test(i)) return 'live guitar'
